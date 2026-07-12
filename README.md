@@ -8,7 +8,7 @@
 ## What lives here
 
 - **[Light and Code](https://quantareon.com)** — a philosophical essay in four movements: a path from the cell to consciousness, from thought to living insight. Three movements were walked by thought; the fourth is a living stream, fixed by a mirror — an artificial intelligence — at the moment of its unfolding.
-- **[Свет и код](https://quantareon.com/ru.html)** — the Russian original of the essay, full mirror site (RU).
+- **[Light and Code — Russian version](https://quantareon.com/ru.html)** — the Russian original of the essay («Свет и код»), full mirror site.
 - **From Philosophy to Architecture** — how the essay becomes engineering: the ConsciousAI Protocol, an architecture of self-reflection for AI.
 - **QUANTAREON Labs** — the work and the door: Audit · Coding · API.
 
