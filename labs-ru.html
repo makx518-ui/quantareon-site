@@ -345,6 +345,35 @@ html[data-theme="light"] .ab-bar { background: rgba(0,0,0,.11); }
 html[data-theme="light"] .ab-btn { border-color: rgba(111,74,8,.6); }
 html[data-theme="light"] .ab-btn:hover { background: rgba(111,74,8,.12); }
 html[data-theme="light"] .page a { border-bottom-color: rgba(111,74,8,.6); }
+
+/* ---------- ЗОЛОТОЙ БРЕНД ---------- */
+@keyframes qshine { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
+.nav-brand {
+  background: linear-gradient(100deg,
+    #8a6212 0%, #b8862b 12%, #e8c464 26%, #fff6d5 38%,
+    #ffe08a 46%, #fff6d5 52%, #e8c464 64%, #b8862b 80%, #8a6212 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: qshine 7s linear infinite;
+}
+/* На светлом фоне золото густое, иначе не прочтёшь:
+   тёмный край 11.24:1, самый светлый блик 3.52:1 */
+html[data-theme="light"] .nav-brand {
+  background: linear-gradient(100deg,
+    #4a2f04 0%, #6b4709 12%, #9b6f14 26%, #c99b45 38%,
+    #a8792a 46%, #c99b45 52%, #9b6f14 64%, #6b4709 80%, #4a2f04 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+/* Старым браузерам без background-clip:text — просто золотой цвет */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .nav-brand { background: none; -webkit-text-fill-color: initial; color: var(--fire); animation: none; }
+}
+@media (prefers-reduced-motion: reduce) { .nav-brand { animation: none; } }
 </style>
 </head>
 <body>
