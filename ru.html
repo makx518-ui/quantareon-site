@@ -8,7 +8,7 @@
 <meta name="description" content="Свет и код: философское эссе в четырёх движениях — путь от клетки до сознания. Философское основание архитектуры ConsciousAI.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script>
 /* Apply saved theme before paint to avoid a flash */
 (function(){
@@ -325,6 +325,95 @@ h3.chapter {
   .brain-hero { width: 100%; margin: 0 auto 2.2rem; }
 }
 
+
+
+/* ============================================================
+   ЧИТАЕМОСТЬ — вариант C, обе темы
+   Контраст считан по WCAG на фоне #f7f4ec (свет) и #0b0d10 (тьма)
+   ============================================================ */
+
+/* ---------- ТЁМНАЯ ---------- */
+:root {
+  --ink:       #fbf8f0;   /* было #e6e1d6  14.92:1 -> 18.33:1 */
+  --ink-dim:   #c8c3b5;   /* было #9a958a   6.52:1 -> 11.05:1 */
+  --ink-faint: #a09a8d;   /* было #66625a   3.21:1 ->  6.95:1  <- было слабо */
+  --fire:      #e8bd6a;   /* было #c9993f   7.52:1 -> 11.04:1 */
+  --line:      #43474f;   /* было #23262d — рамки не видно */
+  --star:      #e9e2d0;
+  --star-glow: rgba(233,226,208,.55);
+  --nav-bg:    rgba(11,13,16,.94);
+}
+/* antialiased на тёмном ОСТАЁТСЯ: светлый текст на тёмном
+   оптически разбухает, сглаживание его поджимает. Не трогаем. */
+html:not([data-theme="light"]) body,
+html:not([data-theme="light"]) .essay p,
+html:not([data-theme="light"]) .page p,
+html:not([data-theme="light"]) .page li,
+html:not([data-theme="light"]) .card p,
+html:not([data-theme="light"]) .ab-name,
+html:not([data-theme="light"]) .essay p em,
+html:not([data-theme="light"]) .page .lede,
+html:not([data-theme="light"]) .quote,
+html:not([data-theme="light"]) h3.chapter,
+html:not([data-theme="light"]) .card .card-t { font-weight: 500; }
+
+/* ---------- СВЕТЛАЯ ---------- */
+html[data-theme="light"] {
+  --bg:        #f7f4ec;
+  --bg-soft:   #efe9db;
+  --ink:       #0d0b07;   /* было #2b2720  13.51:1 -> 17.89:1 */
+  --ink-dim:   #3a352c;   /* было #6d665a   5.17:1 -> 11.07:1 */
+  --ink-faint: #565043;   /* было #9c9481   2.74:1 ->  7.28:1  <- было ПЛОХО */
+  --fire:      #6f4a08;   /* было #a9741a   3.67:1 ->  7.19:1  <- было слабо */
+  --line:      #b3a68a;   /* было #ddd5c4 — рамки не видно */
+  --nav-bg:    rgba(247,244,236,.94);
+  --star:      #a89a7a;
+  --star-glow: rgba(168,154,122,.30);
+  --star-opacity: .05;
+}
+/* ГЛАВНОЕ. antialiased утончает буквы. На тёмном фоне к месту,
+   на светлом высасывает мясо из EB Garamond. Отсюда «заподлицо». */
+html[data-theme="light"] body {
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
+}
+html[data-theme="light"] body,
+html[data-theme="light"] .essay p,
+html[data-theme="light"] .page p,
+html[data-theme="light"] .page li,
+html[data-theme="light"] .card p,
+html[data-theme="light"] .ab-name,
+html[data-theme="light"] .card .card-t { font-weight: 600; }
+html[data-theme="light"] .essay p em,
+html[data-theme="light"] .page .lede,
+html[data-theme="light"] .quote,
+html[data-theme="light"] h3.chapter { font-weight: 500; }
+
+/* ---------- ОБЕ ТЕМЫ ---------- */
+/* Мелкий Inter в капсе с разрядкой рассыпается — 700 и разрядку убавить */
+h2.section .section-label,
+.page h2,
+.page-kicker,
+.ab-title,
+.toc-section,
+.nav-brand { font-weight: 700; letter-spacing: .2em; }
+.nav-links a,
+.toc-chapter,
+.card .card-k,
+.toc-title,
+.ab-meta,
+.footer { font-weight: 600; }
+.footer a { color: var(--ink-dim); }
+.quote { border-left-width: 3px; }
+h2.section .section-label { border-top-width: 1.5px; border-bottom-width: 1.5px; }
+
+/* Светлая: белое на белом */
+html[data-theme="light"] .ab-row { border-top-color: rgba(0,0,0,.09); }
+html[data-theme="light"] .ab-bar { background: rgba(0,0,0,.11); }
+html[data-theme="light"] .ab-btn { border-color: rgba(111,74,8,.6); }
+html[data-theme="light"] .ab-btn:hover { background: rgba(111,74,8,.12); }
+html[data-theme="light"] .page a { border-bottom-color: rgba(111,74,8,.6); }
 </style>
 </head>
 <body>
