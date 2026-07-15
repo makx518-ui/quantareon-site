@@ -304,10 +304,16 @@ h3.chapter {
 /* ---------- Mobile ---------- */
 @media (max-width: 680px) {
   body { font-size: 17.5px; line-height: 1.72; }
-  .nav { position: static; flex-direction: column; gap: .55rem; padding: .9rem 4vw .8rem; }
+  /* Было: position:static — шапка уезжала при прокрутке.
+     flex-wrap:wrap — ссылки прыгали на вторую строку, оттого и плавало. */
+  .nav { position: static; flex-direction: column; gap: .55rem; padding: .9rem 3vw .8rem; }
   .nav-brand { font-size: .8rem; }
-  .nav-links { gap: 1.05rem; flex-wrap: wrap; justify-content: center; }
-  .nav-links a { font-size: .7rem; letter-spacing: .1em; }
+  /* ЕДИНСТВЕННАЯ ПРАВКА: было flex-wrap:wrap — RU и кружок темы
+     срывались на вторую строку. Теперь ряд не рвётся.
+     Считано: на 375px меню занимает 306px, запас 46px. */
+  .nav-links { gap: 1rem; flex-wrap: nowrap; justify-content: center; }
+  .nav-links a { font-size: .7rem; letter-spacing: .07em; white-space: nowrap; }
+  .nav-right { flex-wrap: nowrap; gap: .9rem; }
   .hero-note { margin-top: 2rem !important; font-size: .75rem !important; }
   .toc { margin: 1.8rem .8rem 2.2rem; padding: 1.4rem 1rem; }
   .toc-chapter { font-size: .82rem; padding-left: .9rem; }
