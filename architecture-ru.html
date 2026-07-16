@@ -388,6 +388,29 @@ html[data-theme="light"] .nav-brand {
   .nav-brand { background: none; -webkit-text-fill-color: initial; color: var(--fire); animation: none; }
 }
 @media (prefers-reduced-motion: reduce) { .nav-brand { animation: none; } }
+
+/* ============================================================
+   РУССКИЙ — GEORGIA
+   Мэтью Картер, 1996. Кириллица у неё родная — рисовалась
+   вместе с латиницей, не пришита сбоку.
+   Стоит на всех устройствах. Качать нечего.
+   ============================================================ */
+body,
+.essay p, .page p, .page li, .card p, .card .card-t,
+.essay p em, .page .lede, .quote, h3.chapter,
+.ab-name, h1, h2, h3, h4,
+.essay, .page {
+  font-family: Georgia, "Times New Roman", serif !important;
+}
+body, .essay p, .page p, .page li, .card p, .card .card-t, .ab-name,
+.essay p em, .page .lede, .quote, h3.chapter {
+  font-weight: 400 !important;
+}
+/* Кириллица у Georgia шире латиницы — кегль чуть меньше */
+body { font-size: 17.5px !important; line-height: 1.78 !important; }
+@media (max-width: 680px) {
+  body { font-size: 16px !important; line-height: 1.75 !important; }
+}
 </style>
 </head>
 <body>
