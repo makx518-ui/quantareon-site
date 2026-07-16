@@ -424,9 +424,15 @@ body { font-size: 18px !important; line-height: 1.75 !important; }
 }
 .astro-link:hover { opacity: .78; }
 @media (max-width: 680px) {
-  /* на телефоне поджимаю всё меню, чтоб ASTRO-FRACTAL влез в ряд */
-  .nav-links a { font-size: 8px !important; letter-spacing: .03em !important; }
+  /* Считано: при 10px русское меню занимает 318 из 357 доступных.
+     Запас 39px. Читается вдвое лучше восьмёрки. */
+  .nav-links a { font-size: 10px !important; letter-spacing: .05em !important; }
   .nav-links { gap: 5.5px !important; }
+}
+@media (max-width: 360px) {
+  /* совсем узкие — iPhone SE и старьё */
+  .nav-links a { font-size: 9px !important; letter-spacing: .03em !important; }
+  .nav-links { gap: 4.5px !important; }
 }
 </style>
 </head>
