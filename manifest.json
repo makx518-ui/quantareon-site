@@ -1,0 +1,22 @@
+{
+  "name": "Quantareon",
+  "short_name": "Quantareon",
+  "description": "Light and Code — A Path from the Cell to Consciousness",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0d10",
+  "theme_color": "#0b0d10",
+  "lang": "en",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Эссе (RU)", "url": "/ru.html" },
+    { "name": "Architecture", "url": "/architecture.html" },
+    { "name": "Labs", "url": "/labs.html" }
+  ]
+}
