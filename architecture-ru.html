@@ -422,17 +422,17 @@ body { font-size: 17.5px !important; line-height: 1.78 !important; }
 }
 .astro-link:hover { opacity: .78; }
 @media (max-width: 680px) {
-  /* 12px. Слова целые. Ряд СТОИТ НАМЕРТВО:
-     прокрутки нет, сжатия нет, переноса нет.
-     Считано на 360px: занимает 311 из 312. Влезает. */
+  /* 11px, зазор 8px. Слова целые, дышат.
+     Ряд стоит намертво: прокрутки нет, переноса нет.
+     Считано на 360px: 309 из 312. Влезает. */
   .nav-links a {
-    font-size: 12px !important;
-    letter-spacing: 0 !important;
+    font-size: 11px !important;
+    letter-spacing: .04em !important;
     white-space: nowrap !important;
     flex: 0 0 auto !important;
   }
   .nav-links {
-    gap: 4px !important;
+    gap: 8px !important;
     flex-wrap: nowrap !important;
     justify-content: center !important;
     overflow: visible !important;
