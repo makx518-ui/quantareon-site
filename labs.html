@@ -413,6 +413,21 @@ body { font-size: 18px !important; line-height: 1.75 !important; }
 @media (max-width: 680px) {
   body { font-size: 16.5px !important; line-height: 1.72 !important; }
 }
+
+/* ============================================================
+   ASTRO-FRACTAL — кнопка на движок
+   Тот же шрифт, что у остальных. Только золотом.
+   ============================================================ */
+.astro-link {
+  color: var(--fire) !important;
+  white-space: nowrap;
+}
+.astro-link:hover { opacity: .78; }
+@media (max-width: 680px) {
+  /* на телефоне поджимаю всё меню, чтоб ASTRO-FRACTAL влез в ряд */
+  .nav-links a { font-size: 8px !important; letter-spacing: .03em !important; }
+  .nav-links { gap: 5.5px !important; }
+}
 </style>
 </head>
 <body>
@@ -423,7 +438,8 @@ body { font-size: 18px !important; line-height: 1.75 !important; }
       <a href="index.html">Essay</a>
       <a href="architecture.html">Architecture</a>
       <a href="labs.html" class="active">Labs</a>
-      <a href="labs-ru.html">RU</a>
+      <a class="astro-link" href="https://quantareon-engine.onrender.com" target="_blank" rel="noopener">ASTRO-FRACTAL</a>
+        <a href="labs-ru.html">RU</a>
     </div>
     <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">&#9728;</button>
   </div>
