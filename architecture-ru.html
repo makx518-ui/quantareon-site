@@ -422,30 +422,26 @@ body { font-size: 17.5px !important; line-height: 1.78 !important; }
 }
 .astro-link:hover { opacity: .78; }
 @media (max-width: 680px) {
-  /* 14px — как просил. Слова целые, ничего не режем.
-     По расчёту на 360px не хватает ~30px, потому даю прокрутку:
-     влезло — стоит ровно; не влезло — двигается пальцем,
-     а не рвётся на вторую строку. */
+  /* 13px. Слова целые. НИКАКОЙ ПРОКРУТКИ — ряд стоит намертво.
+     Поля 8px, зазор 3px — так умещается. */
   .nav-links a {
-    font-size: 14px !important;
+    font-size: 13px !important;
     letter-spacing: 0 !important;
     white-space: nowrap;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-width: 0;
   }
   .nav-links {
-    gap: 7px !important;
+    gap: 3px !important;
     flex-wrap: nowrap !important;
-    justify-content: flex-start !important;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;          /* полосу прокрутки прячем */
-    -ms-overflow-style: none;
+    justify-content: space-between !important;
+    overflow: visible !important;
     min-width: 0;
-    padding-bottom: 2px;
+    width: 100%;
   }
-  .nav-links::-webkit-scrollbar { display: none; }
-  .nav-right { min-width: 0; gap: 8px; }
-  .nav { padding-left: 10px; padding-right: 10px; }
+  .nav-right { min-width: 0; gap: 6px; width: 100%; }
+  .nav { padding-left: 8px !important; padding-right: 8px !important; }
+  .theme-toggle { flex: 0 0 auto; }
 }
 </style>
 </head>
