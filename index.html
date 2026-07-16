@@ -978,5 +978,14 @@ fixed by a mirror — an artificial intelligence — at the moment of its unfold
 })();
 </script>
 
+<script>
+/* Регистрируем service worker — иначе Chrome на Android
+   не покажет «Установить приложение» */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  });
+}
+</script>
 </body>
 </html>

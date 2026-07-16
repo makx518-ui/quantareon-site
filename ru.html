@@ -975,5 +975,14 @@ html[data-theme="light"] .nav-brand {
 })();
 </script>
 
+<script>
+/* Регистрируем service worker — иначе Chrome на Android
+   не покажет «Установить приложение» */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function(){});
+  });
+}
+</script>
 </body>
 </html>
