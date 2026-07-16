@@ -16,7 +16,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Quantareon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script>
 /* Apply saved theme before paint to avoid a flash */
 (function(){
@@ -390,41 +390,29 @@ html[data-theme="light"] .nav-brand {
 @media (prefers-reduced-motion: reduce) { .nav-brand { animation: none; } }
 
 /* ============================================================
-   АНГЛИЙСКИЙ — КЛАССИЧЕСКИЙ КНИЖНЫЙ ШРИФТ
-   Charis SIL — прямой потомок Charter Мэтью Картера (1987).
-   Картер рисовал его ПОД ЭКРАН, когда экраны были грубые:
-   толстые штрихи, прямые засечки. Держится там, где
-   Гарамонд рассыпается — на телефоне и на тёмном фоне.
+   АНГЛИЙСКИЙ — GEORGIA
+   Мэтью Картер, 1996, для Microsoft. Рисовал ПОД ЭКРАН:
+   толстые штрихи, широкое очко, крупные буквы.
+   СТОИТ ВЕЗДЕ — Windows, Mac, Android, iPhone.
+   Качать нечего. Сработает всегда.
    ============================================================ */
 body,
 .essay p, .page p, .page li, .card p, .card .card-t,
 .essay p em, .page .lede, .quote, h3.chapter,
-.ab-name, h1, h2, h3, h4 {
-  font-family: 'Charis SIL', Charter, Georgia, serif;
+.ab-name, h1, h2, h3, h4,
+.essay, .page {
+  font-family: Georgia, "Times New Roman", serif !important;
 }
-/* У Charis SIL мясистые штрихи — 600 больше не нужен, он грузнит */
-html[data-theme="light"] body,
-html[data-theme="light"] .essay p,
-html[data-theme="light"] .page p,
-html[data-theme="light"] .page li,
-html[data-theme="light"] .card p,
-html[data-theme="light"] .card .card-t,
-html[data-theme="light"] .ab-name { font-weight: 400; }
-html:not([data-theme="light"]) body,
-html:not([data-theme="light"]) .essay p,
-html:not([data-theme="light"]) .page p,
-html:not([data-theme="light"]) .page li,
-html:not([data-theme="light"]) .card p,
-html:not([data-theme="light"]) .card .card-t,
-html:not([data-theme="light"]) .ab-name { font-weight: 400; }
-/* Charis крупнее Гарамонда в очке — сбавляю кегль и поджимаю строку */
-body { font-size: 18.5px; line-height: 1.72; }
-@media (max-width: 680px) { body { font-size: 17px; line-height: 1.70; } }
-/* Курсив у Charis настоящий, не наклонённый — ему хватает 400 */
-html[data-theme="light"] .essay p em,
-html[data-theme="light"] .page .lede,
-html[data-theme="light"] .quote,
-html[data-theme="light"] h3.chapter { font-weight: 400; }
+/* Georgia мясистая — жирнить не надо */
+body, .essay p, .page p, .page li, .card p, .card .card-t, .ab-name,
+.essay p em, .page .lede, .quote, h3.chapter {
+  font-weight: 400 !important;
+}
+/* У Georgia очко крупнее Гарамонда — сбавляю кегль */
+body { font-size: 18px !important; line-height: 1.75 !important; }
+@media (max-width: 680px) {
+  body { font-size: 16.5px !important; line-height: 1.72 !important; }
+}
 </style>
 </head>
 <body>
