@@ -422,11 +422,10 @@ body { font-size: 17.5px !important; line-height: 1.78 !important; }
 }
 .astro-link:hover { opacity: .78; }
 @media (max-width: 680px) {
-  /* 11px, зазор 8px. Слова целые, дышат.
-     Ряд стоит намертво: прокрутки нет, переноса нет.
-     Считано на 360px: 309 из 312. Влезает. */
+  /* 10px. Слова целые. ВСЁ ПРИБИТО НАМЕРТВО.
+     Ничего не ездит, не болтается, не прокручивается. */
   .nav-links a {
-    font-size: 11px !important;
+    font-size: 10px !important;
     letter-spacing: .04em !important;
     white-space: nowrap !important;
     flex: 0 0 auto !important;
@@ -440,6 +439,16 @@ body { font-size: 17.5px !important; line-height: 1.78 !important; }
   .nav { padding-left: 8px !important; padding-right: 8px !important; }
   .nav-right { gap: 6px; }
 }
+/* ============================================================
+   ПРИБИВАЮ СТРАНИЦУ — ничего не ездит вбок
+   ============================================================ */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+  position: relative;
+}
+* { max-width: 100%; }
+img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; }
 </style>
 </head>
 <body>
