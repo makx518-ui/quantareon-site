@@ -493,27 +493,30 @@ body { font-size: 18px !important; line-height: 1.75 !important; }
 }
 .astro-link:hover { opacity: .78; }
 @media (max-width: 680px) {
-  /* Считано на 360px: доступно 312px.
-     12px, разрядка убрана, зазор 4 -> 311px. Влезает впритык.
-     Слова НЕ сокращаем — влезают целиком. */
+  /* 14px — как просил. Слова целые, ничего не режем.
+     По расчёту на 360px не хватает ~30px, потому даю прокрутку:
+     влезло — стоит ровно; не влезло — двигается пальцем,
+     а не рвётся на вторую строку. */
   .nav-links a {
-    font-size: 12px !important;
+    font-size: 14px !important;
     letter-spacing: 0 !important;
     white-space: nowrap;
+    flex: 0 0 auto;
   }
   .nav-links {
-    gap: 4px !important;
+    gap: 7px !important;
     flex-wrap: nowrap !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;          /* полосу прокрутки прячем */
+    -ms-overflow-style: none;
     min-width: 0;
+    padding-bottom: 2px;
   }
-  /* страховка: если у кого-то шрифт шире моей мерки —
-     ряд не рвётся, а ужимается сам */
-  .nav-right { min-width: 0; }
-}
-@media (max-width: 340px) {
-  .nav-links a { font-size: 10.5px !important; }
-  .nav-links { gap: 3px !important; }
+  .nav-links::-webkit-scrollbar { display: none; }
+  .nav-right { min-width: 0; gap: 8px; }
+  .nav { padding-left: 10px; padding-right: 10px; }
 }
 </style>
 </head>
