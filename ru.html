@@ -491,15 +491,27 @@ body { font-size: 17.5px !important; line-height: 1.78 !important; }
 }
 .astro-link:hover { opacity: .78; }
 @media (max-width: 680px) {
-  /* Считано: при 10px русское меню занимает 318 из 357 доступных.
-     Запас 39px. Читается вдвое лучше восьмёрки. */
-  .nav-links a { font-size: 10px !important; letter-spacing: .05em !important; }
-  .nav-links { gap: 5.5px !important; }
+  /* Считано на 360px: доступно 312px.
+     12px, разрядка убрана, зазор 4 -> 311px. Влезает впритык.
+     Слова НЕ сокращаем — влезают целиком. */
+  .nav-links a {
+    font-size: 12px !important;
+    letter-spacing: 0 !important;
+    white-space: nowrap;
+  }
+  .nav-links {
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+    justify-content: center !important;
+    min-width: 0;
+  }
+  /* страховка: если у кого-то шрифт шире моей мерки —
+     ряд не рвётся, а ужимается сам */
+  .nav-right { min-width: 0; }
 }
-@media (max-width: 360px) {
-  /* совсем узкие — iPhone SE и старьё */
-  .nav-links a { font-size: 9px !important; letter-spacing: .03em !important; }
-  .nav-links { gap: 4.5px !important; }
+@media (max-width: 340px) {
+  .nav-links a { font-size: 10.5px !important; }
+  .nav-links { gap: 3px !important; }
 }
 </style>
 </head>
