@@ -928,24 +928,117 @@ fixed by a mirror — an artificial intelligence — at the moment of its unfold
 <script>
 (function(){
   var audio = new Audio(), current = null;
+  var KEY = 'qr_ab_pos:';
+  var pendingSeek = null, lastSave = 0;
+
+  function load(src){
+    try { var v = JSON.parse(localStorage.getItem(KEY + src)); if (v && v.t > 0) return v; } catch(e){}
+    return null;
+  }
+  function save(src, t, d){
+    try {
+      if (t > 1 && d && d - t > 2) localStorage.setItem(KEY + src, JSON.stringify({t: t, d: d}));
+      else localStorage.removeItem(KEY + src);
+    } catch(e){}
+  }
+  function stash(force){
+    if (!current) return;
+    var now = Date.now();
+    if (!force && now - lastSave < 2000) return;
+    lastSave = now;
+    save(current.dataset.src, audio.currentTime, audio.duration);
+  }
+
+  /* Единый обработчик отложенной перемотки: применяется только к актуальному src */
+  audio.addEventListener('loadedmetadata', function(){
+    if (pendingSeek && pendingSeek.src === audio.src) {
+      try { audio.currentTime = pendingSeek.frac != null ? pendingSeek.frac * audio.duration : pendingSeek.t; } catch(e){}
+    }
+    pendingSeek = null;
+  });
+
   document.querySelectorAll('.ab-row').forEach(function(row){
     var btn = row.querySelector('.ab-btn'), fill = row.querySelector('.ab-fill');
-    btn.addEventListener('click', function(){
-      if (current === row && !audio.paused) { audio.pause(); btn.textContent = '\u25B6'; return; }
+    var bar = row.querySelector('.ab-bar');
+    var src = row.dataset.src;
+    btn.title = 'Play / pause — resumes where you left off';
+
+    /* Кнопка сброса в начало */
+    var rst = document.createElement('button');
+    rst.type = 'button';
+    rst.textContent = '\u27F2 restart';
+    rst.title = 'Reset and listen to this part from the beginning';
+    rst.setAttribute('aria-label', rst.title);
+    rst.className = 'ab-btn';
+    rst.style.cssText = 'width:auto;height:auto;border-radius:999px;padding:.28rem .65rem;font-size:.68rem;opacity:.75;flex:none;white-space:nowrap;';
+    row.appendChild(rst);
+
+    /* Показать сохранённую позицию на полосе при загрузке страницы */
+    var saved = load(src);
+    if (saved && saved.d) fill.style.width = (saved.t / saved.d * 100) + '%';
+
+    function switchAway(){
       if (current && current !== row) {
+        save(current.dataset.src, audio.currentTime, audio.duration);
         current.querySelector('.ab-btn').textContent = '\u25B6';
-        current.querySelector('.ab-fill').style.width = '0%';
       }
-      if (current !== row) { audio.src = row.dataset.src; current = row; }
+    }
+    function startRow(seekObj){
+      switchAway();
+      audio.src = src; current = row;
+      pendingSeek = seekObj; pendingSeek.src = audio.src;
       audio.play(); btn.textContent = '\u2758\u2758';
+    }
+
+    btn.addEventListener('click', function(){
+      if (current === row && !audio.paused) { audio.pause(); stash(true); btn.textContent = '\u25B6'; return; }
+      if (current === row) { audio.play(); btn.textContent = '\u2758\u2758'; return; }
+      var s = load(src);
+      startRow({ t: s ? s.t : 0 });
     });
+
+    rst.addEventListener('click', function(){
+      try { localStorage.removeItem(KEY + src); } catch(e){}
+      fill.style.width = '0%';
+      if (current === row) {
+        audio.pause();
+        try { audio.currentTime = 0; } catch(e){}
+        pendingSeek = null;
+        btn.textContent = '\u25B6';
+      }
+    });
+
+    /* Клик по полосе - перемотка */
+    bar.addEventListener('click', function(ev){
+      var r = bar.getBoundingClientRect();
+      var frac = Math.min(Math.max((ev.clientX - r.left) / r.width, 0), 1);
+      if (current === row && audio.duration) {
+        audio.currentTime = frac * audio.duration;
+        fill.style.width = (frac * 100) + '%';
+        stash(true);
+        return;
+      }
+      startRow({ frac: frac });
+      fill.style.width = (frac * 100) + '%';
+    });
+
     audio.addEventListener('timeupdate', function(){
-      if (current === row && audio.duration) fill.style.width = (audio.currentTime/audio.duration*100) + '%';
+      if (current === row && audio.duration) {
+        fill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+        stash(false);
+      }
     });
   });
+
   audio.addEventListener('ended', function(){
-    if (current) { current.querySelector('.ab-btn').textContent = '\u25B6'; current.querySelector('.ab-fill').style.width = '0%'; }
+    if (current) {
+      try { localStorage.removeItem(KEY + current.dataset.src); } catch(e){}
+      current.querySelector('.ab-btn').textContent = '\u25B6';
+      current.querySelector('.ab-fill').style.width = '0%';
+    }
   });
+
+  window.addEventListener('pagehide', function(){ stash(true); });
 })();
 </script>
 
