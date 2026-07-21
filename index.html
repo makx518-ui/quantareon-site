@@ -192,14 +192,12 @@ body { background: transparent; }
   -webkit-tap-highlight-color: transparent;
 }
 .hero-off:hover { color: var(--fire); border-color: var(--fire); }
-.hero-badge{position:absolute;left:37.1%;top:24.3%;width:25.8%;height:7%;opacity:0;transition:opacity 1.8s ease;pointer-events:none;display:none;z-index:3}
+.hero-badge{position:absolute;opacity:0;transition:opacity 1.8s ease;pointer-events:none;display:none;z-index:3}
 .hero.playing .hero-badge{display:block}
 .hero-badge.on{opacity:1}
-.hero-patch{position:absolute;top:29.7%;width:4.4%;height:3%;background:linear-gradient(rgb(52,48,37),rgb(74,62,48));border-radius:40%;opacity:0;transition:opacity 1.5s ease;pointer-events:none;display:none;z-index:2}
+.hero-patch{position:absolute;background:linear-gradient(rgb(52,48,37),rgb(74,62,48));border-radius:40%;opacity:0;transition:opacity 1.5s ease;pointer-events:none;display:none;z-index:2}
 .hero.playing .hero-patch{display:block}
 .hero-patch.on{opacity:1}
-.hero-patch-l{left:33%}
-.hero-patch-r{left:62.6%}
 
 .hero.paused .hero-off { display: flex; }
 @media (max-width: 680px) { .hero-off { top: calc(50% - 58px); left: calc(50% + 44px); width: 36px; height: 36px; } }
@@ -1062,11 +1060,34 @@ fixed by a mirror — an artificial intelligence — at the moment of its unfold
   var btn = document.getElementById('heroBtn');
   if (!hero || !v || !btn) return;
   var badge = document.getElementById('heroBadge');
-  var patches = document.querySelectorAll('.hero-patch');
+  var patchL = document.querySelector('.hero-patch-l');
+  var patchR = document.querySelector('.hero-patch-r');
+  function placeBadge(){
+    if (!badge) return;
+    var vr = v.getBoundingClientRect(), hr = hero.getBoundingClientRect();
+    if (!vr.width) return;
+    var ox = vr.left - hr.left, oy = vr.top - hr.top;
+    badge.style.left = (ox + vr.width*0.371) + 'px';
+    badge.style.top = (oy + vr.height*0.243) + 'px';
+    badge.style.width = (vr.width*0.258) + 'px';
+    badge.style.height = (vr.height*0.07) + 'px';
+    [[patchL,0.33],[patchR,0.626]].forEach(function(pp){
+      if (!pp[0]) return;
+      pp[0].style.left = (ox + vr.width*pp[1]) + 'px';
+      pp[0].style.top = (oy + vr.height*0.297) + 'px';
+      pp[0].style.width = (vr.width*0.044) + 'px';
+      pp[0].style.height = (vr.height*0.03) + 'px';
+    });
+  }
+  window.addEventListener('resize', placeBadge);
+  v.addEventListener('loadedmetadata', placeBadge);
+  v.addEventListener('play', placeBadge);
   v.addEventListener('timeupdate', function(){
+    placeBadge();
     var on = v.currentTime >= 88.5;
     if (badge) badge.classList.toggle('on', on);
-    for (var i=0;i<patches.length;i++) patches[i].classList.toggle('on', on);
+    if (patchL) patchL.classList.toggle('on', on);
+    if (patchR) patchR.classList.toggle('on', on);
   });
 
   var started = false, needUnmute = false;
