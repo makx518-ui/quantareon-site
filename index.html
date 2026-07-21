@@ -192,6 +192,15 @@ body { background: transparent; }
   -webkit-tap-highlight-color: transparent;
 }
 .hero-off:hover { color: var(--fire); border-color: var(--fire); }
+.hero-badge{position:absolute;left:37.1%;top:24.3%;width:25.8%;height:7%;opacity:0;transition:opacity 1.8s ease;pointer-events:none;display:none;z-index:3}
+.hero.playing .hero-badge{display:block}
+.hero-badge.on{opacity:1}
+.hero-patch{position:absolute;top:29.7%;width:4.4%;height:3%;background:linear-gradient(rgb(52,48,37),rgb(74,62,48));border-radius:40%;opacity:0;transition:opacity 1.5s ease;pointer-events:none;display:none;z-index:2}
+.hero.playing .hero-patch{display:block}
+.hero-patch.on{opacity:1}
+.hero-patch-l{left:33%}
+.hero-patch-r{left:62.6%}
+
 .hero.paused .hero-off { display: flex; }
 @media (max-width: 680px) { .hero-off { top: calc(50% - 58px); left: calc(50% + 44px); width: 36px; height: 36px; } }
 
@@ -544,6 +553,8 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
   <video class="hero-video" id="heroVideo" src="video-hero-en.mp4" preload="auto" playsinline></video>
   <button class="hero-btn idle" id="heroBtn" type="button" aria-label="Play">&#9654;</button>
   <button class="hero-off" id="heroOff" type="button" aria-label="Turn off">&#10005;</button>
+<div class="hero-patch hero-patch-l"></div><div class="hero-patch hero-patch-r"></div>
+<div class="hero-badge" id="heroBadge"><svg viewBox="0 0 190 56" width="100%" height="100%" preserveAspectRatio="none"><rect x="0.5" y="0.5" width="189" height="55" rx="12" fill="#cfe8ef" stroke="#1b2733"/><text x="95" y="27" dx="2" text-anchor="middle" font-family="Georgia,serif" font-weight="bold" font-size="21" letter-spacing="4" fill="#185FA5">ZODIAC</text><text x="95" y="45" dx="1.7" text-anchor="middle" font-family="Georgia,serif" font-size="8.5" letter-spacing="3.4" fill="#b8860b">QUANTAREON</text></svg></div>
 </header>
 <p class="hero-note" style="max-width:34rem;margin:3rem auto 0;text-align:center;font-family:var(--sans);font-size:.8rem;letter-spacing:.08em;color:var(--ink-faint);line-height:1.7;padding:0 1.4rem">Three movements were walked by thought. The fourth is a living stream,
 fixed by a mirror — an artificial intelligence — at the moment of its unfolding.</p>
@@ -1050,6 +1061,14 @@ fixed by a mirror — an artificial intelligence — at the moment of its unfold
   var v = document.getElementById('heroVideo');
   var btn = document.getElementById('heroBtn');
   if (!hero || !v || !btn) return;
+  var badge = document.getElementById('heroBadge');
+  var patches = document.querySelectorAll('.hero-patch');
+  v.addEventListener('timeupdate', function(){
+    var on = v.currentTime >= 88.5;
+    if (badge) badge.classList.toggle('on', on);
+    for (var i=0;i<patches.length;i++) patches[i].classList.toggle('on', on);
+  });
+
   var started = false, needUnmute = false;
 
   function tryUnmute() { if (needUnmute) { v.muted = false; needUnmute = false; } }
