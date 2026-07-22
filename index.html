@@ -166,24 +166,24 @@ body { background: transparent; }
 .hero-btn {
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
-  width: 74px; height: 74px; border-radius: 50%;
+  width: 50px; height: 50px; border-radius: 50%;
   background: rgba(11,13,16,.55);
   border: 1px solid var(--fire);
-  color: var(--fire); font-size: 1.5rem; line-height: 1;
+  color: var(--fire); font-size: 1.05rem; line-height: 1;
   cursor: pointer; z-index: 5;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 26px rgba(201,153,63,.35), inset 0 0 14px rgba(201,153,63,.12);
+  box-shadow: 0 0 18px rgba(201,153,63,.32), inset 0 0 10px rgba(201,153,63,.12);
   transition: opacity .45s ease, box-shadow .3s ease, transform .15s ease;
   -webkit-tap-highlight-color: transparent;
 }
-.hero-btn:hover { box-shadow: 0 0 40px rgba(201,153,63,.6), inset 0 0 18px rgba(201,153,63,.2); transform: translate(-50%,-50%) scale(1.05); }
+.hero-btn:hover { box-shadow: 0 0 28px rgba(201,153,63,.55), inset 0 0 13px rgba(201,153,63,.2); transform: translate(-50%,-50%) scale(1.05); }
 .hero.playing .hero-btn { opacity: 0; }
 .hero.playing:hover .hero-btn { opacity: 1; }
 .hero-btn.idle { opacity: 1 !important; }
-@media (max-width: 680px) { .hero-btn { width: 62px; height: 62px; font-size: 1.25rem; } }
+@media (max-width: 680px) { .hero-btn { width: 42px; height: 42px; font-size: .9rem; } }
 .hero-off {
-  position: absolute; top: calc(50% - 68px); left: calc(50% + 52px);
-  width: 40px; height: 40px; border-radius: 50%;
+  position: absolute; top: calc(50% - 52px); left: calc(50% + 40px);
+  width: 32px; height: 32px; border-radius: 50%;
   background: rgba(11,13,16,.55); border: 1px solid var(--ink-faint);
   color: var(--ink-dim); font-size: .95rem; line-height: 1;
   cursor: pointer; z-index: 5; display: none;
@@ -194,7 +194,7 @@ body { background: transparent; }
 .hero-off:hover { color: var(--fire); border-color: var(--fire); }
 
 .hero.paused .hero-off { display: flex; }
-@media (max-width: 680px) { .hero-off { top: calc(50% - 58px); left: calc(50% + 44px); width: 36px; height: 36px; } }
+@media (max-width: 680px) { .hero-off { top: calc(50% - 44px); left: calc(50% + 34px); width: 28px; height: 28px; font-size: .8rem; } }
 
 .sr-only {
   position: absolute; width: 1px; height: 1px; margin: -1px;
