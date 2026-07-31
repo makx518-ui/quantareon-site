@@ -40,6 +40,40 @@
         PING_INTERVAL_MS: 10000
     };
 
+    // Язык берём у самой страницы (<html lang="ru"> / "en")
+    const LANG = String(document.documentElement.lang || 'ru').toLowerCase().indexOf('en') === 0 ? 'en' : 'ru';
+    const TXT = {
+        ru: {
+            connecting: '🤖 Подключение к серверу…',
+            ready:      '🤖 Голосовой помощник готов — говорите!',
+            starting:   '🤖 Запуск голосового помощника…',
+            stopped:    '🤖 Голосовой помощник выключен',
+            greetWait:  '🤖 Приветствие… микрофон включится следом',
+            reset:      '🔄 Контекст сброшен',
+            micDenied:  '❌ Микрофон запрещён. Разрешите доступ в настройках браузера для этого сайта.',
+            micMissing: '❌ Микрофон не найден.',
+            micBusy:    '❌ Микрофон занят другим приложением.',
+            vadFail:    '❌ Не загрузился распознаватель речи — проверьте интернет.',
+            unknown:    'неизвестная ошибка',
+            greetText:  'Привет! Я Квантареон, ваш помощник и консультант. Что вас интересует? Я готов ответить на ваши вопросы.'
+        },
+        en: {
+            connecting: '🤖 Connecting to the server…',
+            ready:      '🤖 Voice assistant ready — go ahead!',
+            starting:   '🤖 Starting the voice assistant…',
+            stopped:    '🤖 Voice assistant switched off',
+            greetWait:  '🤖 Greeting… the microphone starts next',
+            reset:      '🔄 Context cleared',
+            micDenied:  '❌ Microphone blocked. Allow access for this site in your browser settings.',
+            micMissing: '❌ No microphone found.',
+            micBusy:    '❌ The microphone is busy in another app.',
+            vadFail:    '❌ Speech detector failed to load — check your connection.',
+            unknown:    'unknown error',
+            greetText:  'Hello! I am Quantareon, your assistant and consultant. What are you interested in? I am ready to answer your questions.'
+        }
+    };
+    const T = TXT[LANG];
+
     // Телефон? На нём динамик бьёт прямо в микрофон, и помощник слышит сам себя
     const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
                       || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
@@ -110,7 +144,7 @@
     // ============================================================
     async function preloadGreeting() {
         try {
-            const resp = await fetch(CONFIG.SERVER + '/api/greeting');
+            const resp = await fetch(CONFIG.SERVER + '/api/greeting?lang=' + LANG);
             if (resp.ok) {
                 cachedGreeting = await resp.arrayBuffer();
                 console.log('🤖 RT: Greeting preloaded', cachedGreeting.byteLength, 'bytes');
@@ -148,7 +182,7 @@
                     if (greetingDoneResolve) { greetingDoneResolve(); greetingDoneResolve = null; }
                 };
                 await el.play();
-                addToChat('assistant', 'Привет! Я Квантареон, ваш помощник и консультант. Что вас интересует? Я готов ответить на ваши вопросы.');
+                addToChat('assistant', T.greetText);
                 return;
             } catch (e) {
                 console.warn('🎙 Greeting via <audio> failed, fallback to WebAudio', e);
@@ -197,7 +231,7 @@
                 if (greetingDoneResolve) { greetingDoneResolve(); greetingDoneResolve = null; }
             };
             src.start(0);
-            addToChat('assistant', 'Привет! Я Квантареон, ваш помощник и консультант. Что вас интересует? Я готов ответить на ваши вопросы.');
+            addToChat('assistant', T.greetText);
         } catch (e) {
             isBotSpeaking = false;
             greetingPlaying = false;
@@ -231,7 +265,8 @@
         // Синхронизация памяти с чатом — используем serverUid (точный uid от /api/identify)
         // _serverUid гарантирует совпадение с чатом; fallback на _quid если ещё не готов
         const uid = window._serverUid || window._quid || '';
-        const wsUrl = uid ? `${CONFIG.WS_URL}?uid=${encodeURIComponent(uid)}` : CONFIG.WS_URL;
+        // язык страницы уходит в адрес — сервер сможет выбрать голос и распознавание
+        const wsUrl = CONFIG.WS_URL + (uid ? '?uid=' + encodeURIComponent(uid) + '&lang=' + LANG : '?lang=' + LANG);
         
         console.log('🤖 RT: Connecting to', wsUrl, uid ? '(uid sync ✅)' : '(no uid)');
         ws = new WebSocket(wsUrl);
@@ -275,7 +310,7 @@
                 }
             } catch(e) { console.warn('🔗 RT: Chat history sync error', e); }
             
-            if (typeof showToast === 'function') showToast('🤖 Подключение к серверу...');
+            if (typeof showToast === 'function') showToast(T.connecting);
         };
 
         ws.onclose = (e) => {
@@ -315,7 +350,7 @@
             switch (d.type) {
                 case 'stt_ready':
                     sttReady = true;
-                    if (typeof showToast === 'function') showToast('🤖 Голосовой помощник готов — говорите!');
+                    if (typeof showToast === 'function') showToast(T.ready);
                     break;
                     
                 case 'transcript_interim':
@@ -350,7 +385,7 @@
                     if (d.status === 'ready') {
                         // Сервер готов
                     } else if (d.status === 'reset') {
-                        if (typeof showToast === 'function') showToast('🔄 Контекст сброшен');
+                        if (typeof showToast === 'function') showToast(T.reset);
                     }
                     break;
                     
@@ -415,7 +450,7 @@
             // Поэтому приветствие договаривает ПОЛНОСТЬЮ, и только потом микрофон.
             // Загрузка распознавателя выше шла параллельно — она звука не трогает.
             if (IS_MOBILE && greetingDone) {
-                if (typeof showToast === 'function') showToast('🤖 Приветствие… микрофон включится следом');
+                if (typeof showToast === 'function') showToast(T.greetWait);
                 await Promise.race([
                     greetingDone,
                     new Promise(r => setTimeout(r, 15000))   // страховка, чтобы не зависнуть
@@ -544,12 +579,12 @@
         } catch (err) {
             isActive = false;
             console.error('🤖 RT: Start error', err);
-            var reason = '❌ ' + (err && err.message || 'неизвестная ошибка');
+            var reason = '❌ ' + (err && err.message || T.unknown);
             if (err) {
-                if (err.name === 'NotAllowedError')      reason = '❌ Микрофон запрещён. Разрешите доступ в настройках браузера для этого сайта.';
-                else if (err.name === 'NotFoundError')   reason = '❌ Микрофон не найден.';
-                else if (err.name === 'NotReadableError') reason = '❌ Микрофон занят другим приложением.';
-                else if (String(err.message||'').indexOf('VAD') >= 0) reason = '❌ Не загрузился распознаватель речи — проверьте интернет.';
+                if (err.name === 'NotAllowedError')      reason = T.micDenied;
+                else if (err.name === 'NotFoundError')   reason = T.micMissing;
+                else if (err.name === 'NotReadableError') reason = T.micBusy;
+                else if (String(err.message||'').indexOf('VAD') >= 0) reason = T.vadFail;
             }
             if (typeof showToast === 'function') showToast(reason);
             // Очищаем всё что успели создать
@@ -774,7 +809,7 @@
             // ВЫКЛЮЧАЕМ
             stop();
             if (wrapper) wrapper.classList.remove('active');
-            if (typeof showToast === 'function') showToast('🤖 Голосовой помощник выключен');
+            if (typeof showToast === 'function') showToast(T.stopped);
         } else {
             // ВКЛЮЧАЕМ (с защитой от двойного старта)
             if (isStarting) {
@@ -783,7 +818,7 @@
             }
             unlockAudio();   // 🔓 обязательно синхронно, внутри касания
             if (wrapper) wrapper.classList.add('active');
-            if (typeof showToast === 'function') showToast('🤖 Запуск голосового помощника...');
+            if (typeof showToast === 'function') showToast(T.starting);
             start();
         }
     }
