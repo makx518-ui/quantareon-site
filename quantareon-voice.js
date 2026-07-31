@@ -102,6 +102,8 @@
     let greetingSource = null;      // 🛡️ BufferSource приветствия — для принудительной остановки
     let greetingPlaying = false;    // 🛡️ Флаг: приветствие сейчас играет
     let greetingEl = null;          // 🔊 аудио-элемент приветствия (телефон)
+    let greetingDone = null;        // ⏳ обещание: приветствие договорило
+    let greetingDoneResolve = null;
 
     // ============================================================
     // Предзагрузка приветствия
@@ -125,6 +127,7 @@
         // 🛡️ Ставим замок ДО async операций — предотвращаем повторный вызов
         clientFillerDone = true;
         greetingPlaying = true;
+        greetingDone = new Promise(res => { greetingDoneResolve = res; });
         
         // 🔊 На телефоне звук через WebAudio рвётся: пока грузится и
         // компилируется распознаватель речи, процессор занят и звуковой
@@ -142,6 +145,7 @@
                     greetingPlaying = false;
                     greetingEl = null;
                     try { URL.revokeObjectURL(url); } catch(e) {}
+                    if (greetingDoneResolve) { greetingDoneResolve(); greetingDoneResolve = null; }
                 };
                 await el.play();
                 addToChat('assistant', 'Привет! Я Квантареон, ваш помощник и консультант. Что вас интересует? Я готов ответить на ваши вопросы.');
@@ -190,6 +194,7 @@
                 greetingSource = null;
                 greetingAudioCtx = null;
                 try { ctx.close(); } catch(e) {}
+                if (greetingDoneResolve) { greetingDoneResolve(); greetingDoneResolve = null; }
             };
             src.start(0);
             addToChat('assistant', 'Привет! Я Квантареон, ваш помощник и консультант. Что вас интересует? Я готов ответить на ваши вопросы.');
@@ -199,6 +204,7 @@
             greetingSource = null;
             greetingAudioCtx = null;
             console.warn('🤖 RT: Greeting play error', e);
+            if (greetingDoneResolve) { greetingDoneResolve(); greetingDoneResolve = null; }
         }
     }
 
@@ -397,15 +403,25 @@
             // Мгновенно играем приветствие (кешированное)
             playGreeting();
             
-            // На телефоне даём приветствию спокойно начаться,
-            // прежде чем грузить тяжёлый распознаватель
-            if (IS_MOBILE) await new Promise(r => setTimeout(r, 400));
-
             // Загружаем VAD
             await loadVAD();
             
             // Подключаем WebSocket
             connectWS();
+
+            // 📱 ГЛАВНОЕ ДЛЯ ТЕЛЕФОНА: открытие микрофона заставляет Android
+            // переключить звуковой тракт с «музыкального» на «разговорный»,
+            // и в этот миг из записи выпадает кусок — отсюда проглоченные слова.
+            // Поэтому приветствие договаривает ПОЛНОСТЬЮ, и только потом микрофон.
+            // Загрузка распознавателя выше шла параллельно — она звука не трогает.
+            if (IS_MOBILE && greetingDone) {
+                if (typeof showToast === 'function') showToast('🤖 Приветствие… микрофон включится следом');
+                await Promise.race([
+                    greetingDone,
+                    new Promise(r => setTimeout(r, 15000))   // страховка, чтобы не зависнуть
+                ]);
+                if (!isActive) { isStarting = false; return; }   // успели выключить
+            }
 
             // Запрашиваем микрофон
             micStream = await navigator.mediaDevices.getUserMedia({
