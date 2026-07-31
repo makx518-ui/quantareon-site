@@ -163,6 +163,9 @@ body { background: transparent; }
 }
 .hero.playing .hero-video { display: block; }
 .hero.playing .hero-img { display: none; }
+/* видео загрузилось — старая картинка больше не показывается никогда */
+.hero.ready .hero-video { display: block; }
+.hero.ready .hero-img { display: none; }
 .hero-btn {
   position: absolute; top: 47.4%; left: 50%;
   transform: translate(-50%, -50%);
@@ -695,8 +698,7 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
 
 <footer class="footer">
   <div class="ring">◯</div>
-  <div><a href="essay-ru.html">Свет и код</a> · <a href="architecture-ru.html">От философии к архитектуре</a> · <a href="labs-ru.html">QUANTAREON Labs</a> · <a href="index.html">English</a></div>
-  <div style="margin-top:.8rem">© 2026 Влад М. / QUANTAREON Labs · Все права защищены</div>
+  <div>© 2026 Влад М. / QUANTAREON Labs · Все права защищены</div>
 </footer>
 
 
@@ -727,6 +729,11 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
   var v = document.getElementById('heroVideo');
   var btn = document.getElementById('heroBtn');
   if (!hero || !v || !btn) return;
+
+  /* первый кадр видео готов — прячем старую картинку навсегда */
+  function markReady() { hero.classList.add('ready'); }
+  if (v.readyState >= 2) { markReady(); }
+  else { v.addEventListener('loadeddata', markReady, { once: true }); }
 
   var started = false, needUnmute = false;
 
@@ -770,7 +777,7 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
   v.addEventListener('play', function () { hero.classList.remove('paused'); updateBtn(); });
   v.addEventListener('pause', function () { if (started && !v.ended) hero.classList.add('paused'); updateBtn(); });
 
-  /* крестик: полностью выключить живую заставку, вернуть статичную картинку */
+  /* крестик: остановить заставку, вернуть первый кадр видео */
   var off = document.getElementById('heroOff');
   if (off) off.addEventListener('click', function (ev) {
     ev.stopPropagation();
@@ -781,7 +788,7 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
     updateBtn();
   });
 
-  /* доиграло до конца — возвращаем картинку, кнопка ждёт ручного повтора */
+  /* доиграло до конца — первый кадр видео, кнопка ждёт ручного повтора */
   v.addEventListener('ended', function () {
     hero.classList.remove('playing'); hero.classList.remove('paused');
     started = false;
