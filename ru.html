@@ -666,6 +666,7 @@ html[data-theme="light"] .vmsg.him { background: rgba(0,0,0,.05); }
   transition: opacity .25s, transform .25s; max-width: 88vw; text-align: center;
 }
 .qtoast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.qtoast.bad { border-color: rgba(232,56,79,.55); color: #ffb3bd; }
 html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a2a2a; }
 @keyframes qvibe { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-1px)} 75%{transform:translateX(1px)} }
 /* правый угол: RU/EN + тема */
@@ -986,9 +987,12 @@ function showToast(msg){
   var el = document.getElementById('qtoast');
   if (!el) return;
   el.textContent = msg;
+  var bad = /^[❌⚠]/.test(msg);
+  el.classList.toggle('bad', bad);
   el.classList.add('show');
   clearTimeout(_qtoastTimer);
-  _qtoastTimer = setTimeout(function(){ el.classList.remove('show'); }, 3200);
+  /* ошибку держим дольше — на телефоне консоль не откроешь */
+  _qtoastTimer = setTimeout(function(){ el.classList.remove('show'); }, bad ? 12000 : 3200);
 }
 </script>
 <script src="quantareon-voice.js"></script>

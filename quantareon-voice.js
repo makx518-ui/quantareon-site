@@ -39,6 +39,23 @@
         PING_INTERVAL_MS: 10000
     };
 
+    // Кроссбраузерный AudioContext (старые iOS понимают только с префиксом)
+    const ACtx = window.AudioContext || window.webkitAudioContext;
+
+    // 🔓 Разблокировка звука — вызывается СИНХРОННО из касания пользователя.
+    // Без этого iOS/Android держат звук выключенным: касание — единственный
+    // момент, когда браузер разрешает включить аудио.
+    let unlockCtx = null;
+    function unlockAudio() {
+        try {
+            if (!unlockCtx) unlockCtx = new ACtx();
+            if (unlockCtx.state === 'suspended') unlockCtx.resume();
+            const b = unlockCtx.createBuffer(1, 1, 22050);
+            const s = unlockCtx.createBufferSource();
+            s.buffer = b; s.connect(unlockCtx.destination); s.start(0);
+        } catch (e) { console.warn('🎙 unlock failed', e); }
+    }
+
     // ============================================================
     // STATE — единственный экземпляр
     // ============================================================
@@ -104,7 +121,7 @@
         
         try {
             isBotSpeaking = true;
-            const ctx = new AudioContext();
+            const ctx = new ACtx();
             greetingAudioCtx = ctx;  // 🛡️ Сохраняем для stop()
             
             if (ctx.state === 'suspended') await ctx.resume();
@@ -410,7 +427,11 @@
             });
 
             // PCM streaming — отправляем аудио на сервер
-            audioCtx = new AudioContext({ sampleRate: 16000 });
+            // iOS не даёт задать частоту принудительно — берём как выйдет,
+            // ниже по коду есть пересчёт частоты, он всё выровняет
+            try { audioCtx = new ACtx({ sampleRate: 16000 }); }
+            catch (e) { audioCtx = new ACtx(); }
+            if (audioCtx.state === 'suspended') { try { await audioCtx.resume(); } catch (e) {} }
             const src = audioCtx.createMediaStreamSource(micStream);
             scriptProc = audioCtx.createScriptProcessor(4096, 1, 1);
 
@@ -460,7 +481,14 @@
         } catch (err) {
             isActive = false;
             console.error('🤖 RT: Start error', err);
-            if (typeof showToast === 'function') showToast('❌ Ошибка микрофона: ' + err.message);
+            var reason = '❌ ' + (err && err.message || 'неизвестная ошибка');
+            if (err) {
+                if (err.name === 'NotAllowedError')      reason = '❌ Микрофон запрещён. Разрешите доступ в настройках браузера для этого сайта.';
+                else if (err.name === 'NotFoundError')   reason = '❌ Микрофон не найден.';
+                else if (err.name === 'NotReadableError') reason = '❌ Микрофон занят другим приложением.';
+                else if (String(err.message||'').indexOf('VAD') >= 0) reason = '❌ Не загрузился распознаватель речи — проверьте интернет.';
+            }
+            if (typeof showToast === 'function') showToast(reason);
             // Очищаем всё что успели создать
             cleanupResources();
         } finally {
@@ -567,7 +595,8 @@
         const blob = audioQueue.shift();
         
         try {
-            const ctx = new AudioContext();
+            const ctx = new ACtx();
+            if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (e) {} }
             currentAudio = ctx;
             const gain = ctx.createGain();
             gain.gain.value = 1.0;
@@ -659,6 +688,7 @@
                 console.warn('🤖 RT: Already starting, ignoring');
                 return;
             }
+            unlockAudio();   // 🔓 обязательно синхронно, внутри касания
             if (wrapper) wrapper.classList.add('active');
             if (typeof showToast === 'function') showToast('🤖 Запуск голосового помощника...');
             start();
