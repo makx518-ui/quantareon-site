@@ -40,6 +40,16 @@
         PING_INTERVAL_MS: 10000
     };
 
+    // 👑 Секретный ключ хозяина: один раз открыть сайт как ?key=СЕКРЕТ —
+    // ключ запомнится в этом браузере и дальше уходит на сервер сам.
+    // Гостям он неизвестен, поэтому их помощник знает как гостей.
+    let OWNER_KEY = '';
+    try {
+        const _q = new URLSearchParams(location.search).get('key');
+        if (_q) { localStorage.setItem('qOwnerKey', _q); }
+        OWNER_KEY = localStorage.getItem('qOwnerKey') || '';
+    } catch (e) { OWNER_KEY = ''; }
+
     // Язык берём у самой страницы (<html lang="ru"> / "en")
     const LANG = String(document.documentElement.lang || 'ru').toLowerCase().indexOf('en') === 0 ? 'en' : 'ru';
     const TXT = {
@@ -266,7 +276,8 @@
         // _serverUid гарантирует совпадение с чатом; fallback на _quid если ещё не готов
         const uid = window._serverUid || window._quid || '';
         // язык страницы уходит в адрес — сервер сможет выбрать голос и распознавание
-        const wsUrl = CONFIG.WS_URL + (uid ? '?uid=' + encodeURIComponent(uid) + '&lang=' + LANG : '?lang=' + LANG);
+        let wsUrl = CONFIG.WS_URL + (uid ? '?uid=' + encodeURIComponent(uid) + '&lang=' + LANG : '?lang=' + LANG);
+        if (OWNER_KEY) wsUrl += '&key=' + encodeURIComponent(OWNER_KEY);
         
         console.log('🤖 RT: Connecting to', wsUrl, uid ? '(uid sync ✅)' : '(no uid)');
         ws = new WebSocket(wsUrl);
