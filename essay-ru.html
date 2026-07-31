@@ -528,7 +528,6 @@ html, body {
 }
 * { max-width: 100%; }
 img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; }
-</style>
 
 /* ============================================================
    НОВАЯ ШАПКА — книжечка-Меню + имя QUANTAREON + RU/EN + тема
@@ -636,6 +635,7 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
 .astro-sub { margin-top: .6rem; font-family: var(--sans); font-size: .72rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); }
 @media (max-width: 680px) { .astro-name { font-size: 18px; letter-spacing: 3px; } }
 
+</style>
 </head>
 <body>
 <div class="scrim" id="scrim"></div>
@@ -1202,14 +1202,11 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
   }
   book.addEventListener('click', function(){ toggle(!drawer.classList.contains('open')); });
   scrim.addEventListener('click', function(){ toggle(false); });
-
   var qname = document.getElementById('qname');
   qname.addEventListener('click', function(){
     qname.classList.toggle('active');
     var hint = document.querySelector('.talk-hint');
     if (hint) hint.style.display = 'none';
-    // на будущее: открытие голосовой платформы
-    // window.open('https://ПЛАТФОРМА?voice=1','_blank');
   });
 })();
 </script>
