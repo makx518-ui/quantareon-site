@@ -1,0 +1,701 @@
+/**
+ * QUANTAREON Voice — голос платформы на сайте quantareon.com
+ * (копия realtime-модуля платформы, адреса переведены на сервер Амверы)
+ * Голосовой помощник — работает с voice-master WebSocket протоколом
+ * 
+ * Кнопка 🤖 включает/выключает голосовой режим
+ * Транскрипт идёт в чат платформы
+ * 
+ * ФИКСЫ v1.2:
+ * - Одна сессия — невозможно открыть несколько голосов
+ * - Корректное включение/выключение с полной очисткой
+ * - Филлеры не повторяются (server-side через skip_filler)
+ * - Barge-in работает правильно
+ */
+
+(function() {
+    'use strict';
+
+    // ============================================================
+    // CONFIG
+    // ============================================================
+    const CONFIG = {
+        // WebSocket URL — тот же сервер (unified)
+        // Сервер платформы QUANTARION на Амвере (сайт живёт отдельно)
+        SERVER: 'https://quantarion-platform-vladm.amvera.io',
+        WS_URL: 'wss://quantarion-platform-vladm.amvera.io/ws/voice',
+        
+        // VAD настройки
+        VAD_POSITIVE_THRESHOLD: 0.57,
+        VAD_NEGATIVE_THRESHOLD: 0.25,
+        VAD_REDEMPTION_FRAMES: 15,
+        VAD_MIN_SPEECH_FRAMES: 8,
+        VAD_DEBOUNCE_MS: 350,
+        VAD_MIN_DURATION_MS: 500,
+        
+        // Watchdog & reconnect
+        WATCHDOG_MS: 30000,
+        RECONNECT_MS: 3000,
+        PING_INTERVAL_MS: 10000
+    };
+
+    // ============================================================
+    // STATE — единственный экземпляр
+    // ============================================================
+    let ws = null;
+    let isActive = false;
+    let isStarting = false;      // 🛡️ Защита от двойного старта
+    let isBotSpeaking = false;
+    let isPlaying = false;
+    let sttReady = false;
+    let bargeInTriggered = false;
+    let userInitiatedStop = false;
+
+    // Audio
+    let micStream = null;
+    let vadStream = null;
+    let audioCtx = null;
+    let scriptProc = null;
+    let sileroVAD = null;
+    let audioQueue = [];
+    let currentAudio = null;
+
+    // VAD
+    let speechTimer = null;
+    let speechConfirmed = false;
+    let speechStart = 0;
+    let watchdog = null;
+    let lastActivity = Date.now();
+    let pingInterval = null;
+
+    // Текущий ответ ассистента (собираем по чанкам)
+    let currentResponse = '';
+
+    // 🔒 Филлеры — отслеживаем чтобы не повторялись
+    let cachedGreeting = null;
+    let clientFillerDone = false;   // Клиентский greeting отыграл
+    let serverFillerDone = false;   // Серверный filler отыграл (первое сообщение)
+    let greetingAudioCtx = null;    // 🛡️ AudioContext приветствия — для принудительной остановки
+    let greetingSource = null;      // 🛡️ BufferSource приветствия — для принудительной остановки
+    let greetingPlaying = false;    // 🛡️ Флаг: приветствие сейчас играет
+
+    // ============================================================
+    // Предзагрузка приветствия
+    // ============================================================
+    async function preloadGreeting() {
+        try {
+            const resp = await fetch(CONFIG.SERVER + '/api/greeting');
+            if (resp.ok) {
+                cachedGreeting = await resp.arrayBuffer();
+                console.log('🤖 RT: Greeting preloaded', cachedGreeting.byteLength, 'bytes');
+            }
+        } catch (e) {
+            console.warn('🤖 RT: Greeting preload failed', e);
+        }
+    }
+
+    // Воспроизведение приветствия (только один раз, с возможностью принудительной остановки)
+    async function playGreeting() {
+        if (!cachedGreeting || clientFillerDone || greetingPlaying) return;
+        
+        // 🛡️ Ставим замок ДО async операций — предотвращаем повторный вызов
+        clientFillerDone = true;
+        greetingPlaying = true;
+        
+        try {
+            isBotSpeaking = true;
+            const ctx = new AudioContext();
+            greetingAudioCtx = ctx;  // 🛡️ Сохраняем для stop()
+            
+            if (ctx.state === 'suspended') await ctx.resume();
+            
+            // 🛡️ Проверяем что нас не выключили пока ждали resume
+            if (!isActive) {
+                greetingPlaying = false;
+                isBotSpeaking = false;
+                try { ctx.close(); } catch(e) {}
+                greetingAudioCtx = null;
+                return;
+            }
+            
+            const buf = await ctx.decodeAudioData(cachedGreeting.slice(0));
+            
+            // 🛡️ Ещё раз проверяем — decodeAudioData тоже async
+            if (!isActive) {
+                greetingPlaying = false;
+                isBotSpeaking = false;
+                try { ctx.close(); } catch(e) {}
+                greetingAudioCtx = null;
+                return;
+            }
+            
+            const src = ctx.createBufferSource();
+            greetingSource = src;  // 🛡️ Сохраняем для stop()
+            src.buffer = buf;
+            src.connect(ctx.destination);
+            src.onended = () => {
+                isBotSpeaking = false;
+                greetingPlaying = false;
+                greetingSource = null;
+                greetingAudioCtx = null;
+                try { ctx.close(); } catch(e) {}
+            };
+            src.start(0);
+            addToChat('assistant', 'Привет! Я Квантареон, ваш помощник и консультант. Что вас интересует? Я готов ответить на ваши вопросы.');
+        } catch (e) {
+            isBotSpeaking = false;
+            greetingPlaying = false;
+            greetingSource = null;
+            greetingAudioCtx = null;
+            console.warn('🤖 RT: Greeting play error', e);
+        }
+    }
+
+    // ============================================================
+    // VAD CDN загрузка
+    // ============================================================
+    function loadVAD() {
+        return new Promise((resolve, reject) => {
+            if (window.vad) { resolve(); return; }
+            const s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.29/dist/bundle.min.js';
+            s.onload = resolve;
+            s.onerror = () => reject(new Error('VAD load failed'));
+            document.head.appendChild(s);
+        });
+    }
+
+    // ============================================================
+    // WebSocket — подключение к voice-master протоколу
+    // ============================================================
+    function connectWS() {
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+        
+        // Синхронизация памяти с чатом — используем serverUid (точный uid от /api/identify)
+        // _serverUid гарантирует совпадение с чатом; fallback на _quid если ещё не готов
+        const uid = window._serverUid || window._quid || '';
+        const wsUrl = uid ? `${CONFIG.WS_URL}?uid=${encodeURIComponent(uid)}` : CONFIG.WS_URL;
+        
+        console.log('🤖 RT: Connecting to', wsUrl, uid ? '(uid sync ✅)' : '(no uid)');
+        ws = new WebSocket(wsUrl);
+        ws.binaryType = 'blob';  // 🔑 Voice-master шлёт бинарные аудио-фреймы
+
+        ws.onopen = () => {
+            console.log('🤖 RT: Connected');
+            lastActivity = Date.now();
+            
+            // 🔒 ЖЕЛЕЗНЫЙ ЗАМОК ФИЛЛЕРА
+            if (serverFillerDone) {
+                // Reconnect — филлер уже играл, пропускаем на сервере
+                ws.send(JSON.stringify({ type: 'skip_filler' }));
+                console.log('🔒 RT: Filler skip (already played)');
+            } else {
+                // Первое подключение — филлер сейчас будет играть
+                // Закрываем замок СРАЗУ, не дожидаясь audio_start
+                serverFillerDone = true;
+                console.log('🔒 RT: Filler lock set (first connect)');
+            }
+            
+            // Пинг для поддержания соединения
+            if (pingInterval) clearInterval(pingInterval);
+            pingInterval = setInterval(() => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'ping' }));
+                }
+            }, CONFIG.PING_INTERVAL_MS);
+            
+            // 🔗 Синхронизация: отправляем историю текстового чата голосовому ИИ
+            try {
+                var chatMsgs = window.chatMessages || [];
+                if (chatMsgs.length > 0) {
+                    var history = chatMsgs.slice(-10).map(function(m) {
+                        return { role: m.role || (m.type === 'user' ? 'user' : 'assistant'), content: m.content || m.text || '' };
+                    }).filter(function(m) { return m.content && m.role; });
+                    if (history.length > 0) {
+                        ws.send(JSON.stringify({ type: 'chat_history', messages: history }));
+                        console.log('🔗 RT: Chat history sent:', history.length, 'messages');
+                    }
+                }
+            } catch(e) { console.warn('🔗 RT: Chat history sync error', e); }
+            
+            if (typeof showToast === 'function') showToast('🤖 Подключение к серверу...');
+        };
+
+        ws.onclose = (e) => {
+            console.log('🤖 RT: Disconnected', e.code, e.reason);
+            if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
+            
+            if (userInitiatedStop) {
+                userInitiatedStop = false;
+                return;
+            }
+            // Авто-реконнект только если активен
+            if (isActive) {
+                console.log('🤖 RT: Reconnecting in', CONFIG.RECONNECT_MS, 'ms');
+                setTimeout(connectWS, CONFIG.RECONNECT_MS);
+            }
+        };
+
+        ws.onerror = (e) => console.error('🤖 RT: WS error', e);
+        ws.onmessage = onMessage;
+    }
+
+    // ============================================================
+    // Обработка сообщений от voice-master сервера
+    // ============================================================
+    function onMessage(event) {
+        lastActivity = Date.now();
+        
+        // 🔑 Бинарные данные = аудио (voice-master шлёт Blob/bytes)
+        if (event.data instanceof Blob) {
+            playChunk(event.data);
+            return;
+        }
+        
+        try {
+            const d = JSON.parse(event.data);
+            
+            switch (d.type) {
+                case 'stt_ready':
+                    sttReady = true;
+                    if (typeof showToast === 'function') showToast('🤖 Голосовой помощник готов — говорите!');
+                    break;
+                    
+                case 'transcript_interim':
+                    // Промежуточный транскрипт — можно показать в UI
+                    break;
+                    
+                case 'transcript_final':
+                    if (d.content) addToChat('user', d.content);
+                    break;
+                    
+                case 'response_text':
+                    currentResponse += (currentResponse ? ' ' : '') + d.content;
+                    break;
+                    
+                case 'audio_start':
+                    isBotSpeaking = true;
+                    serverFillerDone = true;  // 🔒 Замок: любой звук = филлер больше не нужен
+                    bargeInTriggered = false;
+                    currentResponse = '';
+                    break;
+                    
+                case 'audio_end':
+                    isBotSpeaking = false;
+                    serverFillerDone = true;  // 🔒 Серверный филлер отыграл
+                    if (currentResponse) {
+                        addToChat('assistant', currentResponse);
+                        currentResponse = '';
+                    }
+                    break;
+                    
+                case 'status':
+                    if (d.status === 'ready') {
+                        // Сервер готов
+                    } else if (d.status === 'reset') {
+                        if (typeof showToast === 'function') showToast('🔄 Контекст сброшен');
+                    }
+                    break;
+                    
+                case 'error':
+                    console.error('🤖 RT: Server error:', d.message);
+                    if (typeof showToast === 'function') showToast('❌ ' + d.message);
+                    break;
+                    
+                case 'pong':
+                    // Ответ на ping — всё OK
+                    break;
+                    
+                case 'metric_llm_start':
+                case 'metric_tts_start':
+                    // Метрики — игнорируем на клиенте
+                    break;
+            }
+        } catch (e) {
+            console.warn('🤖 RT: Parse error', e);
+        }
+    }
+
+    // ============================================================
+    // Добавление в чат платформы
+    // ============================================================
+    function addToChat(role, text) {
+        if (!text || text === '...') return;
+        // 🔗 Помечаем голосовые сообщения для синхронизации с чатботом
+        var taggedText = '🎤 ' + text;
+        // Используем глобальную функцию addMessage платформы
+        if (typeof addMessage === 'function') {
+            addMessage(role === 'user' ? 'user' : 'assistant', taggedText, true);
+        }
+    }
+
+    // ============================================================
+    // ЗАПУСК голосового режима
+    // ============================================================
+    async function start() {
+        // 🛡️ Защита от двойного старта
+        if (isActive || isStarting) {
+            console.warn('🤖 RT: Already active or starting, ignoring');
+            return;
+        }
+        isStarting = true;
+        
+        try {
+            isActive = true;
+            
+            // Мгновенно играем приветствие (кешированное)
+            playGreeting();
+            
+            // Загружаем VAD
+            await loadVAD();
+            
+            // Подключаем WebSocket
+            connectWS();
+
+            // Запрашиваем микрофон
+            micStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 16000,
+                    channelCount: 1
+                }
+            });
+
+            // Клонируем трек для VAD
+            const track = micStream.getAudioTracks()[0].clone();
+            vadStream = new MediaStream([track]);
+
+            // Инициализация Silero VAD
+            sileroVAD = await vad.MicVAD.new({
+                stream: vadStream,
+                onnxWASMBasePath: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/",
+                baseAssetPath: "https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.29/dist/",
+                positiveSpeechThreshold: CONFIG.VAD_POSITIVE_THRESHOLD,
+                negativeSpeechThreshold: CONFIG.VAD_NEGATIVE_THRESHOLD,
+                redemptionFrames: CONFIG.VAD_REDEMPTION_FRAMES,
+                minSpeechFrames: CONFIG.VAD_MIN_SPEECH_FRAMES,
+
+                onSpeechStart: () => {
+                    speechStart = Date.now();
+                    if (speechTimer) clearTimeout(speechTimer);
+                    speechTimer = setTimeout(() => {
+                        speechConfirmed = true;
+                        lastActivity = Date.now();
+                        // Barge-in если бот говорит
+                        if (isBotSpeaking || isPlaying || audioQueue.length > 0) {
+                            bargeIn();
+                        }
+                    }, CONFIG.VAD_DEBOUNCE_MS);
+                },
+
+                onSpeechEnd: () => {
+                    if (speechTimer) { clearTimeout(speechTimer); speechTimer = null; }
+                    const dur = Date.now() - speechStart;
+                    if (dur < CONFIG.VAD_MIN_DURATION_MS || !speechConfirmed) {
+                        speechConfirmed = false;
+                        return;
+                    }
+                    lastActivity = Date.now();
+                    bargeInTriggered = false;
+                    speechConfirmed = false;
+                    // Отправляем speech_end серверу — voice-master протокол
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send(JSON.stringify({ type: 'speech_end' }));
+                    }
+                },
+
+                onVADMisfire: () => {}
+            });
+
+            // PCM streaming — отправляем аудио на сервер
+            audioCtx = new AudioContext({ sampleRate: 16000 });
+            const src = audioCtx.createMediaStreamSource(micStream);
+            scriptProc = audioCtx.createScriptProcessor(4096, 1, 1);
+
+            scriptProc.onaudioprocess = (e) => {
+                if (!isActive || !ws || ws.readyState !== WebSocket.OPEN || isBotSpeaking) return;
+                const inp = e.inputBuffer.getChannelData(0);
+                if (!inp || !inp.length) return;
+                
+                // Ресемплинг если нужно
+                const pcm = audioCtx.sampleRate !== 16000 ? resample(inp, audioCtx.sampleRate) : inp;
+                
+                // Конвертация в Int16 PCM
+                const buf = new Int16Array(pcm.length);
+                for (let i = 0; i < pcm.length; i++) {
+                    const s = Math.max(-1, Math.min(1, pcm[i]));
+                    buf[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                }
+                ws.send(buf.buffer);
+            };
+
+            src.connect(scriptProc);
+            scriptProc.connect(audioCtx.destination);
+            await sileroVAD.start();
+
+            // Watchdog — при зависании реконнектим WS, НЕ перезапускаем start()
+            // (перезапуск start() мог вызвать повторное приветствие)
+            if (watchdog) clearInterval(watchdog);
+            watchdog = setInterval(() => {
+                if (!isActive) { clearInterval(watchdog); watchdog = null; return; }
+                if (Date.now() - lastActivity > CONFIG.WATCHDOG_MS) {
+                    console.warn('🤖 RT: Watchdog timeout, reconnecting WS...');
+                    lastActivity = Date.now();  // 🛡️ Сброс чтобы не зациклиться
+                    // Переподключаем только WebSocket, не весь модуль
+                    if (ws) {
+                        userInitiatedStop = true;  // Не триггерим авто-реконнект
+                        try { ws.close(); } catch(e) {}
+                        ws = null;
+                    }
+                    setTimeout(() => {
+                        if (isActive) connectWS();
+                    }, 1000);
+                }
+            }, 5000);
+
+            console.log('🤖 RT: Started successfully');
+            
+        } catch (err) {
+            isActive = false;
+            console.error('🤖 RT: Start error', err);
+            if (typeof showToast === 'function') showToast('❌ Ошибка микрофона: ' + err.message);
+            // Очищаем всё что успели создать
+            cleanupResources();
+        } finally {
+            isStarting = false;
+        }
+    }
+
+    // ============================================================
+    // ОСТАНОВКА — полная очистка всех ресурсов
+    // ============================================================
+    function stop() {
+        console.log('🤖 RT: Stopping...');
+        isActive = false;
+        isStarting = false;
+        
+        // serverFillerDone НЕ сбрасываем — при повторном включении приветствие не повторяется
+        
+        // 🛡️ ПРИНУДИТЕЛЬНАЯ ОСТАНОВКА ПРИВЕТСТВИЯ
+        if (greetingSource) {
+            try { greetingSource.stop(0); } catch(e) {}
+            greetingSource = null;
+        }
+        if (greetingAudioCtx) {
+            try { greetingAudioCtx.close(); } catch(e) {}
+            greetingAudioCtx = null;
+        }
+        greetingPlaying = false;
+        
+        // Таймеры
+        if (speechTimer) { clearTimeout(speechTimer); speechTimer = null; }
+        speechConfirmed = false;
+        if (watchdog) { clearInterval(watchdog); watchdog = null; }
+        if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
+        
+        // Состояние
+        isBotSpeaking = false;
+        sttReady = false;
+        bargeInTriggered = false;
+        currentResponse = '';
+        
+        // Останавливаем воспроизведение
+        stopPlayback();
+        
+        // Закрываем WebSocket
+        if (ws) {
+            userInitiatedStop = true;
+            try { ws.close(); } catch(e) {}
+            ws = null;
+        }
+        
+        // Очистка ресурсов
+        cleanupResources();
+        
+        console.log('🤖 RT: Stopped');
+    }
+    
+    function cleanupResources() {
+        // VAD
+        if (sileroVAD) {
+            try { sileroVAD.pause(); } catch(e) {}
+            try { sileroVAD.destroy(); } catch(e) {}
+            sileroVAD = null;
+        }
+        
+        // VAD stream
+        if (vadStream) {
+            vadStream.getTracks().forEach(t => { try { t.stop(); } catch(e) {} });
+            vadStream = null;
+        }
+        
+        // Script processor
+        if (scriptProc) {
+            try { scriptProc.disconnect(); } catch(e) {}
+            scriptProc = null;
+        }
+        
+        // Микрофон
+        if (micStream) {
+            micStream.getTracks().forEach(t => { try { t.stop(); } catch(e) {} });
+            micStream = null;
+        }
+        
+        // AudioContext
+        if (audioCtx && audioCtx.state !== 'closed') {
+            try { audioCtx.close(); } catch(e) {}
+            audioCtx = null;
+        }
+    }
+
+    // ============================================================
+    // Audio playback — воспроизведение ответов от сервера
+    // ============================================================
+    function playChunk(blob) {
+        if (bargeInTriggered) return;
+        audioQueue.push(blob);
+        if (!isPlaying) playNext();
+    }
+
+    async function playNext() {
+        if (bargeInTriggered) { audioQueue = []; isPlaying = false; currentAudio = null; return; }
+        if (!audioQueue.length) { isPlaying = false; currentAudio = null; return; }
+        
+        isPlaying = true;
+        const blob = audioQueue.shift();
+        
+        try {
+            const ctx = new AudioContext();
+            currentAudio = ctx;
+            const gain = ctx.createGain();
+            gain.gain.value = 1.0;
+            currentAudio.gainNode = gain;
+            
+            const ab = await blob.arrayBuffer();
+            const buf = await ctx.decodeAudioData(ab);
+            const s = ctx.createBufferSource();
+            s.buffer = buf;
+            s.connect(gain);
+            gain.connect(ctx.destination);
+            
+            s.onended = () => {
+                if (currentAudio === ctx) currentAudio = null;
+                try { ctx.close(); } catch(e) {}
+                playNext();
+            };
+            s.start(0);
+        } catch (e) {
+            console.warn('🤖 RT: Playback error', e);
+            currentAudio = null;
+            playNext();
+        }
+    }
+
+    function stopPlayback() {
+        audioQueue = [];
+        isPlaying = false;
+        if (currentAudio) {
+            try {
+                const c = currentAudio;
+                if (c.gainNode) {
+                    c.gainNode.gain.setValueAtTime(1, c.currentTime);
+                    c.gainNode.gain.linearRampToValueAtTime(0, c.currentTime + 0.05);
+                }
+                setTimeout(() => {
+                    try { c.suspend(); c.close(); } catch(e) {}
+                }, 50);
+            } catch(e) {}
+            currentAudio = null;
+        }
+    }
+
+    // ============================================================
+    // Barge-in — прерывание бота
+    // ============================================================
+    function bargeIn() {
+        bargeInTriggered = true;
+        stopPlayback();
+        isBotSpeaking = false;
+        isPlaying = false;
+        // Отправляем barge_in серверу — voice-master протокол
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'barge_in' }));
+        }
+    }
+
+    // ============================================================
+    // Ресемплинг
+    // ============================================================
+    function resample(data, from) {
+        const r = from / 16000;
+        const len = Math.round(data.length / r);
+        const out = new Float32Array(len);
+        for (let i = 0; i < len; i++) {
+            const idx = i * r;
+            const f = Math.floor(idx);
+            const c = Math.min(f + 1, data.length - 1);
+            const t = idx - f;
+            out[i] = data[f] * (1 - t) + data[c] * t;
+        }
+        return out;
+    }
+
+    // ============================================================
+    // Toggle — вызывается кнопкой 🤖
+    // ============================================================
+    function toggle() {
+        const wrapper = document.getElementById('qname');   // индикатор = имя QUANTAREON на сайте
+        
+        if (isActive) {
+            // ВЫКЛЮЧАЕМ
+            stop();
+            if (wrapper) wrapper.classList.remove('active');
+            if (typeof showToast === 'function') showToast('🤖 Голосовой помощник выключен');
+        } else {
+            // ВКЛЮЧАЕМ (с защитой от двойного старта)
+            if (isStarting) {
+                console.warn('🤖 RT: Already starting, ignoring');
+                return;
+            }
+            if (wrapper) wrapper.classList.add('active');
+            if (typeof showToast === 'function') showToast('🤖 Запуск голосового помощника...');
+            start();
+        }
+    }
+
+    // 🔒 Сброс филлеров (при новом чате / сбросе сессии)
+    function resetFillers() {
+        clientFillerDone = false;
+        serverFillerDone = false;  // Новая сессия = новое приветствие
+    }
+    
+    // Сброс контекста на сервере
+    function resetContext() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'reset' }));
+        }
+        resetFillers();
+    }
+
+    // ============================================================
+    // Глобальный API
+    // ============================================================
+    window.QuantarionRealtime = {
+        toggle,
+        isActive: () => isActive,
+        stop,
+        resetFillers,
+        resetContext
+    };
+    
+    // Глобальная функция для кнопки в HTML
+    window.toggleRealtime = toggle;
+    window.QuantareonVoice = window.QuantarionRealtime;
+    
+    console.log('🎙 QUANTAREON Voice loaded → ' + CONFIG.WS_URL);
+    
+    // Предзагружаем приветствие
+    preloadGreeting();
+})();

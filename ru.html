@@ -573,11 +573,46 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
   border: 1.5px solid var(--fire); border-radius: 50%;
   transform: translate(-50%,-50%); opacity: 0; pointer-events: none;
 }
-.qname.active .ring { animation: qpulse 1.8s ease-out infinite; }
-.qname.active .ring:nth-child(2) { animation-delay: .6s; }
-.qname.active .ring:nth-child(3) { animation-delay: 1.2s; }
-@keyframes qpulse { 0%{width:20px;height:20px;opacity:.7} 100%{width:170px;height:80px;opacity:0} }
-.qname.active { animation: qvibe .12s linear infinite; }
+/* медленное растекание волн — 4.2 сек на круг, три волны вдогонку */
+.qname.active .ring { animation: qpulse 4.2s cubic-bezier(.22,.61,.36,1) infinite; }
+.qname.active .ring:nth-child(2) { animation-delay: 1.4s; }
+.qname.active .ring:nth-child(3) { animation-delay: 2.8s; }
+@keyframes qpulse {
+  0%   { width: 26px; height: 22px; opacity: .85; border-color: rgba(232,56,79,.8); }
+  35%  { border-color: rgba(232,56,79,.45); }
+  100% { width: 260px; height: 110px; opacity: 0; border-color: var(--fire); }
+}
+/* красное сердце: тихо тлеет за именем, пока голос активен */
+.qname.active::before {
+  content: ''; position: absolute; left: 50%; top: 50%;
+  width: 132px; height: 46px; transform: translate(-50%,-50%);
+  border-radius: 50%; pointer-events: none; z-index: -1;
+  background: radial-gradient(ellipse at center,
+    rgba(232,56,79,.55) 0%, rgba(232,56,79,.22) 45%, rgba(232,56,79,0) 72%);
+  animation: qheart 4.2s ease-in-out infinite;
+}
+@keyframes qheart {
+  0%,100% { opacity: .45; transform: translate(-50%,-50%) scale(.92); }
+  50%     { opacity: 1;   transform: translate(-50%,-50%) scale(1.08); }
+}
+@media (max-width: 680px) {
+  @keyframes qpulse {
+    0%   { width: 22px; height: 18px; opacity: .85; border-color: rgba(232,56,79,.8); }
+    100% { width: 190px; height: 84px; opacity: 0; border-color: var(--fire); }
+  }
+  .qname.active::before { width: 104px; height: 38px; }
+}
+/* всплывашка статуса голоса */
+.qtoast {
+  position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(12px);
+  background: rgba(12,14,18,.92); color: var(--ink);
+  border: 1px solid rgba(212,175,90,.35); border-radius: 999px;
+  padding: .6rem 1.15rem; font-family: var(--sans); font-size: .85rem;
+  letter-spacing: .02em; z-index: 300; opacity: 0; pointer-events: none;
+  transition: opacity .25s, transform .25s; max-width: 88vw; text-align: center;
+}
+.qtoast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a2a2a; }
 @keyframes qvibe { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-1px)} 75%{transform:translateX(1px)} }
 /* правый угол: RU/EN + тема */
 .topbar-right {
@@ -818,11 +853,25 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
   book.addEventListener('click', function(){ toggle(!drawer.classList.contains('open')); });
   scrim.addEventListener('click', function(){ toggle(false); });
   var qname = document.getElementById('qname');
+  var hint = document.querySelector('.talk-hint');
+  /* подсказка прячется, пока голос работает, и возвращается когда он выключен */
+  function syncHint(){
+    var on = qname.classList.contains('active');
+    if (hint) hint.style.display = on ? 'none' : '';
+  }
   qname.addEventListener('click', function(){
-    qname.classList.toggle('active');
-    var hint = document.querySelector('.talk-hint');
-    if (hint) hint.style.display = 'none';
+    if (window.QuantareonVoice) {
+      window.QuantareonVoice.toggle();
+    } else {
+      qname.classList.toggle('active');
+      showToast('Голосовой помощник ещё загружается…');
+    }
+    syncHint();
+    /* старт голоса не мгновенный — досматриваем состояние */
+    setTimeout(syncHint, 400);
   });
+  /* если голос отвалился сам (сеть, ошибка) — подсказка тоже вернётся */
+  setInterval(syncHint, 1500);
 })();
 </script>
 
@@ -836,5 +885,19 @@ if ('serviceWorker' in navigator) {
 }
 </script>
 
+<div class="qtoast" id="qtoast"></div>
+<script>
+/* ---------- всплывашка статуса (её ищет голосовой модуль) ---------- */
+var _qtoastTimer = null;
+function showToast(msg){
+  var el = document.getElementById('qtoast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_qtoastTimer);
+  _qtoastTimer = setTimeout(function(){ el.classList.remove('show'); }, 3200);
+}
+</script>
+<script src="quantareon-voice.js"></script>
 </body>
 </html>
