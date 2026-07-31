@@ -81,6 +81,7 @@
     let sileroVAD = null;
     let audioQueue = [];
     let currentAudio = null;
+    let currentEl = null;           // 🔊 аудио-элемент текущего куска ответа (телефон)
 
     // VAD
     let speechTimer = null;
@@ -100,6 +101,7 @@
     let greetingAudioCtx = null;    // 🛡️ AudioContext приветствия — для принудительной остановки
     let greetingSource = null;      // 🛡️ BufferSource приветствия — для принудительной остановки
     let greetingPlaying = false;    // 🛡️ Флаг: приветствие сейчас играет
+    let greetingEl = null;          // 🔊 аудио-элемент приветствия (телефон)
 
     // ============================================================
     // Предзагрузка приветствия
@@ -124,6 +126,33 @@
         clientFillerDone = true;
         greetingPlaying = true;
         
+        // 🔊 На телефоне звук через WebAudio рвётся: пока грузится и
+        // компилируется распознаватель речи, процессор занят и звуковой
+        // конвейер не успевает — из фразы выпадают куски. Обычный
+        // аудио-элемент проигрывает мимо главного потока и не рвётся.
+        if (IS_MOBILE) {
+            try {
+                isBotSpeaking = true;
+                const url = URL.createObjectURL(new Blob([cachedGreeting.slice(0)], { type: 'audio/mpeg' }));
+                const el = new Audio(url);
+                el.preload = 'auto';
+                greetingEl = el;
+                el.onended = el.onerror = () => {
+                    isBotSpeaking = false;
+                    greetingPlaying = false;
+                    greetingEl = null;
+                    try { URL.revokeObjectURL(url); } catch(e) {}
+                };
+                await el.play();
+                addToChat('assistant', 'Привет! Я Квантареон, ваш помощник и консультант. Что вас интересует? Я готов ответить на ваши вопросы.');
+                return;
+            } catch (e) {
+                console.warn('🎙 Greeting via <audio> failed, fallback to WebAudio', e);
+                greetingEl = null;
+                // падаем в обычный путь ниже
+            }
+        }
+
         try {
             isBotSpeaking = true;
             const ctx = new ACtx();
@@ -368,6 +397,10 @@
             // Мгновенно играем приветствие (кешированное)
             playGreeting();
             
+            // На телефоне даём приветствию спокойно начаться,
+            // прежде чем грузить тяжёлый распознаватель
+            if (IS_MOBILE) await new Promise(r => setTimeout(r, 400));
+
             // Загружаем VAD
             await loadVAD();
             
@@ -521,6 +554,10 @@
         // serverFillerDone НЕ сбрасываем — при повторном включении приветствие не повторяется
         
         // 🛡️ ПРИНУДИТЕЛЬНАЯ ОСТАНОВКА ПРИВЕТСТВИЯ
+        if (greetingEl) {
+            try { greetingEl.pause(); greetingEl.src = ''; } catch(e) {}
+            greetingEl = null;
+        }
         if (greetingSource) {
             try { greetingSource.stop(0); } catch(e) {}
             greetingSource = null;
@@ -608,6 +645,28 @@
         isPlaying = true;
         const blob = audioQueue.shift();
         
+        // 🔊 Телефон: ответы тоже играем аудио-элементом — не рвутся при нагрузке
+        if (IS_MOBILE) {
+            try {
+                const url = URL.createObjectURL(blob);
+                const el = new Audio(url);
+                currentEl = el;
+                const finish = () => {
+                    if (currentEl === el) currentEl = null;
+                    try { URL.revokeObjectURL(url); } catch(e) {}
+                    playNext();
+                };
+                el.onended = finish;
+                el.onerror = finish;
+                await el.play();
+                return;
+            } catch (e) {
+                console.warn('🎙 Chunk via <audio> failed, fallback to WebAudio', e);
+                currentEl = null;
+                // падаем в обычный путь ниже
+            }
+        }
+
         try {
             const ctx = new ACtx();
             if (ctx.state === 'suspended') { try { await ctx.resume(); } catch (e) {} }
@@ -639,6 +698,10 @@
     function stopPlayback() {
         audioQueue = [];
         isPlaying = false;
+        if (currentEl) {
+            try { currentEl.pause(); currentEl.onended = null; currentEl.src = ''; } catch(e) {}
+            currentEl = null;
+        }
         if (currentAudio) {
             try {
                 const c = currentAudio;
