@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Проверка голоса · QUANTAREON</title>
+<style>
+  :root { --gold:#d4af5a; --red:#e8384f; --green:#4ec98a; }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; padding:18px 14px 60px; background:#0b0d10; color:#e9e2d0;
+    font-family: -apple-system, "Segoe UI", Roboto, sans-serif; font-size:15px; line-height:1.5;
+  }
+  h1 { font-size:1.1rem; letter-spacing:.12em; color:var(--gold); text-transform:uppercase; margin:0 0 4px; }
+  p.sub { color:#8b8578; font-size:.85rem; margin:0 0 18px; }
+  button {
+    display:block; width:100%; padding:14px; margin:0 0 14px;
+    background:rgba(212,175,90,.14); color:var(--gold);
+    border:1px solid rgba(212,175,90,.5); border-radius:10px;
+    font-size:1rem; font-weight:600; cursor:pointer;
+  }
+  button:active { background:rgba(212,175,90,.28); }
+  button.sec { background:none; color:#8b8578; border-color:#333; font-weight:400; }
+  .row {
+    display:flex; gap:10px; align-items:flex-start;
+    padding:10px 12px; margin-bottom:8px; border-radius:9px;
+    background:rgba(255,255,255,.04); border-left:3px solid #444;
+  }
+  .row.ok   { border-left-color:var(--green); }
+  .row.bad  { border-left-color:var(--red); }
+  .row.wait { border-left-color:var(--gold); }
+  .ic { flex:none; font-size:1.05rem; width:1.3em; }
+  .tx { flex:1; }
+  .tx b { display:block; font-size:.93rem; }
+  .tx span { display:block; color:#9a9384; font-size:.8rem; word-break:break-word; }
+  #env { margin-top:22px; padding:12px; background:rgba(255,255,255,.03); border-radius:9px;
+         font-size:.75rem; color:#8b8578; word-break:break-all; }
+</style>
+</head>
+<body>
+
+<h1>Проверка голоса</h1>
+<p class="sub">Нажми кнопку и дай разрешение на микрофон, когда спросит. Проверка идёт по шагам — покажет, где обрыв.</p>
+
+<button id="go">Начать проверку</button>
+<button id="copy" class="sec">Скопировать результат</button>
+
+<div id="out"></div>
+<div id="env"></div>
+
+<script>
+var out = document.getElementById('out');
+var lines = [];
+
+function step(name){
+  var d = document.createElement('div');
+  d.className = 'row wait';
+  d.innerHTML = '<div class="ic">…</div><div class="tx"><b>'+name+'</b><span></span></div>';
+  out.appendChild(d);
+  return {
+    ok: function(msg){
+      d.className='row ok'; d.querySelector('.ic').textContent='✓';
+      d.querySelector('span').textContent = msg||'';
+      lines.push('OK  — '+name+(msg?' | '+msg:''));
+    },
+    bad: function(msg){
+      d.className='row bad'; d.querySelector('.ic').textContent='✕';
+      d.querySelector('span').textContent = msg||'';
+      lines.push('СБОЙ — '+name+(msg?' | '+msg:''));
+    }
+  };
+}
+
+var HOST = 'quantarion-platform-vladm.amvera.io';
+
+document.getElementById('go').onclick = async function(){
+  out.innerHTML = ''; lines = [];
+  this.disabled = true; this.textContent = 'Идёт проверка…';
+
+  /* 1 — звук разблокирован касанием (делаем синхронно, прямо здесь) */
+  var s1 = step('1. Звук разрешён касанием');
+  var ACtx = window.AudioContext || window.webkitAudioContext;
+  var unlockState = 'нет AudioContext';
+  try {
+    var u = new ACtx();
+    u.resume();
+    var b = u.createBuffer(1,1,22050), sc = u.createBufferSource();
+    sc.buffer = b; sc.connect(u.destination); sc.start(0);
+    unlockState = u.state;
+    s1.ok('состояние: '+u.state+', частота '+u.sampleRate+' Гц');
+  } catch(e){ s1.bad(e.name+': '+e.message); }
+
+  /* 2 — защищённое соединение */
+  var s2 = step('2. Защищённое соединение (https)');
+  if (location.protocol === 'https:') s2.ok(location.host);
+  else s2.bad('открыто как '+location.protocol+' — микрофон браузер не даст');
+
+  /* 3 — браузер вообще умеет микрофон */
+  var s3 = step('3. Браузер умеет запрашивать микрофон');
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) s3.ok('');
+  else { s3.bad('нет getUserMedia — старый браузер или не https'); }
+
+  /* 4 — сам микрофон */
+  var s4 = step('4. Доступ к микрофону');
+  var stream = null;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio:{ echoCancellation:true, noiseSuppression:true }});
+    var tr = stream.getAudioTracks()[0];
+    s4.ok('устройство: '+((tr && tr.label) || 'без названия'));
+  } catch(e){
+    var why = e.name+': '+e.message;
+    if (e.name === 'NotAllowedError') why = 'запрещено. Замочек в адресной строке → Настройки сайта → Микрофон → Разрешить';
+    if (e.name === 'NotFoundError')  why = 'микрофон не найден';
+    if (e.name === 'NotReadableError') why = 'занят другим приложением';
+    s4.bad(why);
+  }
+
+  /* 5 — запись на 16 кГц */
+  var s5 = step('5. Запись звука (частота 16 кГц)');
+  var actx = null;
+  if (stream) {
+    try {
+      try { actx = new ACtx({ sampleRate:16000 }); }
+      catch(e){ actx = new ACtx(); }
+      if (actx.state === 'suspended') { try { await actx.resume(); } catch(e){} }
+      var src = actx.createMediaStreamSource(stream);
+      var proc = actx.createScriptProcessor(4096,1,1);
+      var got = 0, peak = 0;
+      proc.onaudioprocess = function(ev){
+        var d = ev.inputBuffer.getChannelData(0);
+        got++;
+        for (var i=0;i<d.length;i+=64){ var a = Math.abs(d[i]); if (a>peak) peak=a; }
+      };
+      src.connect(proc); proc.connect(actx.destination);
+      await new Promise(function(r){ setTimeout(r, 2200); });
+      try { proc.disconnect(); src.disconnect(); } catch(e){}
+      if (got > 0) s5.ok('частота '+actx.sampleRate+' Гц, порций '+got+', громкость '+peak.toFixed(3)+(peak<0.005?' — тихо, скажи что-нибудь и повтори':''));
+      else s5.bad('звук с микрофона не идёт (контекст: '+actx.state+')');
+    } catch(e){ s5.bad(e.name+': '+e.message); }
+  } else s5.bad('пропущено — нет микрофона');
+
+  /* 6 — распознаватель речи (библиотека с внешнего сайта) */
+  var s6 = step('6. Загрузка распознавателя речи (VAD)');
+  try {
+    await new Promise(function(res, rej){
+      if (window.vad) return res();
+      var sc = document.createElement('script');
+      sc.src = 'https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.29/dist/bundle.min.js';
+      sc.onload = res;
+      sc.onerror = function(){ rej(new Error('не скачался файл с cdn.jsdelivr.net')); };
+      document.head.appendChild(sc);
+      setTimeout(function(){ rej(new Error('слишком долго — 20 сек')); }, 20000);
+    });
+    s6.ok(window.vad ? 'библиотека на месте' : 'файл загрузился, но модуля нет');
+  } catch(e){ s6.bad(e.message); }
+
+  /* 7 — запуск распознавателя (тут чаще всего и падает на телефоне) */
+  var s7 = step('7. Запуск распознавателя');
+  if (window.vad && stream) {
+    try {
+      var v = await window.vad.MicVAD.new({
+        onnxWASMBasePath: 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/',
+        baseAssetPath: 'https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.29/dist/',
+        onSpeechStart:function(){}, onSpeechEnd:function(){} });
+      await v.start();
+      await new Promise(function(r){ setTimeout(r, 1200); });
+      try { v.pause(); v.destroy && v.destroy(); } catch(e){}
+      s7.ok('запустился');
+    } catch(e){ s7.bad(e.name+': '+e.message); }
+  } else s7.bad('пропущено — нет библиотеки или микрофона');
+
+  /* 8 — связь с сервером */
+  var s8 = step('8. Связь с сервером (WebSocket)');
+  try {
+    await new Promise(function(res, rej){
+      var ws = new WebSocket('wss://'+HOST+'/ws/voice');
+      var done = false;
+      ws.onopen = function(){ done = true; s8.ok('соединение открыто'); try{ws.close();}catch(e){} res(); };
+      ws.onerror = function(){ if(!done){ rej(new Error('не удалось соединиться')); } };
+      setTimeout(function(){ if(!done) rej(new Error('сервер не ответил за 12 сек')); }, 12000);
+    });
+  } catch(e){ s8.bad(e.message); }
+
+  /* 9 — воспроизведение голоса с сервера */
+  var s9 = step('9. Проигрывание голоса');
+  try {
+    var resp = await fetch('https://'+HOST+'/api/greeting');
+    if (!resp.ok) throw new Error('сервер ответил '+resp.status);
+    var ab = await resp.arrayBuffer();
+    var pctx = new ACtx();
+    if (pctx.state === 'suspended') { try { await pctx.resume(); } catch(e){} }
+    var buf = await pctx.decodeAudioData(ab.slice(0));
+    var bs = pctx.createBufferSource();
+    bs.buffer = buf; bs.connect(pctx.destination); bs.start(0);
+    s9.ok('играет приветствие ('+Math.round(ab.byteLength/1024)+' КБ, '+buf.duration.toFixed(1)+' сек) — слышишь голос?');
+  } catch(e){ s9.bad(e.name+': '+e.message); }
+
+  if (stream) { try { stream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){} }
+
+  document.getElementById('env').textContent =
+    'Браузер: '+navigator.userAgent+
+    ' | Экран: '+window.innerWidth+'×'+window.innerHeight+
+    ' | Звук при старте: '+unlockState;
+
+  this.disabled = false; this.textContent = 'Проверить ещё раз';
+};
+
+document.getElementById('copy').onclick = function(){
+  var txt = lines.join('\n') + '\n' + document.getElementById('env').textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(txt).then(function(){ alert('Скопировано — вставь мне в чат'); },
+                                            function(){ alert(txt); });
+  } else alert(txt);
+};
+</script>
+
+</body>
+</html>
