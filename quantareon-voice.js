@@ -31,6 +31,7 @@
         VAD_REDEMPTION_FRAMES: 15,
         VAD_MIN_SPEECH_FRAMES: 8,
         VAD_DEBOUNCE_MS: 350,
+        VAD_DEBOUNCE_MS_SPEAKING_MOBILE: 1300,   // на телефоне, пока помощник говорит
         VAD_MIN_DURATION_MS: 500,
         
         // Watchdog & reconnect
@@ -38,6 +39,10 @@
         RECONNECT_MS: 3000,
         PING_INTERVAL_MS: 10000
     };
+
+    // Телефон? На нём динамик бьёт прямо в микрофон, и помощник слышит сам себя
+    const IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+                      || (window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
 
     // Кроссбраузерный AudioContext (старые iOS понимают только с префиксом)
     const ACtx = window.AudioContext || window.webkitAudioContext;
@@ -397,14 +402,23 @@
                 onSpeechStart: () => {
                     speechStart = Date.now();
                     if (speechTimer) clearTimeout(speechTimer);
+                    // На телефоне динамик слышен микрофону: если верить первому же
+                    // шороху, помощник перебивает сам себя и глотает слова.
+                    // Поэтому пока он говорит — ждём заведомо человеческую речь.
+                    var speakingNow = isBotSpeaking || isPlaying || audioQueue.length > 0;
+                    var wait = (speakingNow && IS_MOBILE)
+                             ? CONFIG.VAD_DEBOUNCE_MS_SPEAKING_MOBILE
+                             : CONFIG.VAD_DEBOUNCE_MS;
                     speechTimer = setTimeout(() => {
                         speechConfirmed = true;
                         lastActivity = Date.now();
                         // Barge-in если бот говорит
                         if (isBotSpeaking || isPlaying || audioQueue.length > 0) {
+                            // приветствие не перебиваем никогда — оно короткое
+                            if (greetingPlaying) return;
                             bargeIn();
                         }
-                    }, CONFIG.VAD_DEBOUNCE_MS);
+                    }, wait);
                 },
 
                 onSpeechEnd: () => {
