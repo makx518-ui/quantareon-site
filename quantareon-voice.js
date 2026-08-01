@@ -61,6 +61,11 @@
         } catch (e) {}
     })();
 
+    // 🕐 Часовой пояс берём У БРАУЗЕРА: он знает настоящий, а определение
+    // по адресу в сети врёт при VPN и у провайдеров с чужими адресами.
+    let USER_TZ = '';
+    try { USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+
     // Язык берём у самой страницы (<html lang="ru"> / "en")
     const LANG = String(document.documentElement.lang || 'ru').toLowerCase().indexOf('en') === 0 ? 'en' : 'ru';
     const TXT = {
@@ -289,6 +294,7 @@
         // язык страницы уходит в адрес — сервер сможет выбрать голос и распознавание
         let wsUrl = CONFIG.WS_URL + (uid ? '?uid=' + encodeURIComponent(uid) + '&lang=' + LANG : '?lang=' + LANG);
         if (OWNER_KEY) wsUrl += '&key=' + encodeURIComponent(OWNER_KEY);
+        if (USER_TZ)   wsUrl += '&tz=' + encodeURIComponent(USER_TZ);
         
         console.log('🤖 RT: Connecting to', wsUrl, uid ? '(uid sync ✅)' : '(no uid)');
         ws = new WebSocket(wsUrl);
