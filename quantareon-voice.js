@@ -34,7 +34,7 @@
         VAD_DEBOUNCE_MS: 350,
         VAD_DEBOUNCE_MS_SPEAKING_MOBILE: 1300,   // на телефоне, пока помощник говорит
         VAD_DEBOUNCE_MS_SPEAKING_DESKTOP: 900,   // на компьютере — колонки тоже слышны микрофону
-        VAD_MIN_DURATION_MS: 500,
+        VAD_MIN_DURATION_MS: 350,   // короче — реже теряем быстрые реплики
         
         // Watchdog & reconnect
         WATCHDOG_MS: 30000,
@@ -559,7 +559,12 @@
                 onSpeechEnd: () => {
                     if (speechTimer) { clearTimeout(speechTimer); speechTimer = null; }
                     const dur = Date.now() - speechStart;
-                    if (dur < CONFIG.VAD_MIN_DURATION_MS || !speechConfirmed) {
+                    // РАНЬШЕ: если детектор не успел «подтвердить» речь
+                    // (короткая фраза, или порог поднят пока помощник говорит),
+                    // реплика ВЫБРАСЫВАЛАСЬ молча — отсюда «то слышит, то нет».
+                    // Теперь отбрасываем только совсем короткие обрывки, а всё
+                    // остальное отдаём серверу: пусть он решает по тексту.
+                    if (dur < CONFIG.VAD_MIN_DURATION_MS) {
                         speechConfirmed = false;
                         return;
                     }
