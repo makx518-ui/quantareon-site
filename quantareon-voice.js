@@ -21,9 +21,10 @@
     // ============================================================
     const CONFIG = {
         // WebSocket URL — тот же сервер (unified)
-        // Сервер платформы QUANTARION на Амвере (сайт живёт отдельно)
-        SERVER: 'https://quantarion-platform-vladm.amvera.io',
-        WS_URL: 'wss://quantarion-platform-vladm.amvera.io/ws/voice',
+        // 🎙 Голосовой Квантареон живёт на Render рядом с движком Астро-Фрактала.
+        // Перенесён с Амверы 01.08.2026 — у неё развалилась сеть.
+        SERVER: 'https://quantareon-engine.onrender.com',
+        WS_URL: 'wss://quantareon-engine.onrender.com/ws/voice',
         
         // VAD настройки
         VAD_POSITIVE_THRESHOLD: 0.57,
@@ -49,6 +50,16 @@
         if (_q) { localStorage.setItem('qOwnerKey', _q); }
         OWNER_KEY = localStorage.getItem('qOwnerKey') || '';
     } catch (e) { OWNER_KEY = ''; }
+
+    // ☕ Render на бесплатном тарифе засыпает после простоя и просыпается
+    // до минуты. Будим его заранее, как только страница открылась, —
+    // чтобы к моменту клика по имени он уже был на ногах.
+    (function wakeServer() {
+        try {
+            fetch('https://quantareon-engine.onrender.com/health',
+                  { mode: 'no-cors', cache: 'no-store' }).catch(function(){});
+        } catch (e) {}
+    })();
 
     // Язык берём у самой страницы (<html lang="ru"> / "en")
     const LANG = String(document.documentElement.lang || 'ru').toLowerCase().indexOf('en') === 0 ? 'en' : 'ru';
