@@ -33,6 +33,7 @@
         VAD_MIN_SPEECH_FRAMES: 8,
         VAD_DEBOUNCE_MS: 350,
         VAD_DEBOUNCE_MS_SPEAKING_MOBILE: 1300,   // на телефоне, пока помощник говорит
+        VAD_DEBOUNCE_MS_SPEAKING_DESKTOP: 900,   // на компьютере — колонки тоже слышны микрофону
         VAD_MIN_DURATION_MS: 500,
         
         // Watchdog & reconnect
@@ -50,6 +51,22 @@
         if (_q) { localStorage.setItem('qOwnerKey', _q); }
         OWNER_KEY = localStorage.getItem('qOwnerKey') || '';
     } catch (e) { OWNER_KEY = ''; }
+
+    // ⏳ Если ответ долго не приходит — говорим об этом, а не молчим.
+    // Раньше тишина выглядела как зависание.
+    let waitTimer = null;
+    function startWaitNotice() {
+        stopWaitNotice();
+        waitTimer = setTimeout(function () {
+            if (typeof showToast === 'function') showToast('🤖 Думаю…');
+            waitTimer = setTimeout(function () {
+                if (typeof showToast === 'function') showToast('🤖 Долго думаю — сейчас отвечу');
+            }, 9000);
+        }, 6000);
+    }
+    function stopWaitNotice() {
+        if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; }
+    }
 
     // ☕ Render на бесплатном тарифе засыпает после простоя и просыпается
     // до минуты. Будим его заранее, как только страница открылась, —
@@ -387,6 +404,7 @@
                     
                 case 'transcript_final':
                     if (d.content) addToChat('user', d.content);
+                    startWaitNotice();       // ⏳ пошло ожидание ответа
                     break;
                     
                 case 'response_text':
@@ -394,6 +412,7 @@
                     break;
                     
                 case 'audio_start':
+                    stopWaitNotice();        // ⏳ ответ пошёл — ожидание снято
                     isBotSpeaking = true;
                     serverFillerDone = true;  // 🔒 Замок: любой звук = филлер больше не нужен
                     bargeInTriggered = false;
@@ -518,9 +537,13 @@
                     // шороху, помощник перебивает сам себя и глотает слова.
                     // Поэтому пока он говорит — ждём заведомо человеческую речь.
                     var speakingNow = isBotSpeaking || isPlaying || audioQueue.length > 0;
-                    var wait = (speakingNow && IS_MOBILE)
-                             ? CONFIG.VAD_DEBOUNCE_MS_SPEAKING_MOBILE
-                             : CONFIG.VAD_DEBOUNCE_MS;
+                    // Пока помощник говорит, микрофон слышит его же голос из
+                    // динамика — и на телефоне, и на компьютере. Поэтому порог
+                    // перебивания поднят: случайный шорох ответ не оборвёт,
+                    // а настоящая речь — оборвёт.
+                    var wait = !speakingNow ? CONFIG.VAD_DEBOUNCE_MS
+                             : (IS_MOBILE ? CONFIG.VAD_DEBOUNCE_MS_SPEAKING_MOBILE
+                                          : CONFIG.VAD_DEBOUNCE_MS_SPEAKING_DESKTOP);
                     speechTimer = setTimeout(() => {
                         speechConfirmed = true;
                         lastActivity = Date.now();
