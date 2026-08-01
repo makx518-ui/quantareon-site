@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en" translate="no" class="notranslate">
+<html lang="ru" translate="no" class="notranslate">
 <head>
 <meta charset="UTF-8">
 <meta name="google" content="notranslate">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Light and Code — A Path from the Cell to Consciousness · QUANTAREON</title>
-<meta name="description" content="Light and Code: a philosophical essay in four movements — a path from the cell to consciousness. The philosophical foundation of the ConsciousAI architecture.">
+<title>Видео Квантареон · QUANTAREON</title>
+<meta name="description" content="Свет и код: философское эссе в четырёх движениях — путь от клетки до сознания. Философское основание архитектуры ConsciousAI.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.png">
@@ -720,25 +720,63 @@ html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a
 .astro-sub { margin-top: .6rem; font-family: var(--sans); font-size: .72rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); }
 @media (max-width: 680px) { .astro-name { font-size: 18px; letter-spacing: 3px; } }
 
+
+
+/* ================== СТРАНИЦЫ МЕДИА ================== */
+.media-wrap { max-width: 780px; margin: 0 auto; padding: 3.5rem 6vw 5rem; }
+.media-kicker {
+  font-family: var(--sans); font-size: 1rem; letter-spacing: .28em;
+  text-transform: uppercase; color: var(--fire); margin-bottom: .8rem;
+}
+.media-title {
+  font-size: clamp(2.4rem, 5.5vw, 3.6rem); font-weight: 500;
+  letter-spacing: .05em; line-height: 1.15; margin: 0 0 1.2rem;
+}
+.media-lead { color: var(--ink-dim); font-size: 1.02rem; line-height: 1.7; margin: 0 0 3rem; max-width: 60ch; }
+
+/* карточка вещи (песня или ролик) */
+.item {
+  display: block; padding: 1.1rem 1.3rem; margin-bottom: .9rem;
+  background: rgba(255,255,255,.035); border: 1px solid rgba(212,175,90,.18);
+  border-radius: 12px; text-decoration: none; color: inherit;
+  transition: border-color .25s, background .25s, transform .25s;
+}
+.item:hover { border-color: rgba(212,175,90,.45); background: rgba(212,175,90,.07); transform: translateY(-2px); }
+.item-name { font-size: 1.08rem; letter-spacing: .02em; margin-bottom: .25rem; }
+.item-note { font-family: var(--sans); font-size: .82rem; color: var(--ink-dim); }
+.item-play { float: right; color: var(--fire); font-size: 1.1rem; margin-left: 1rem; }
+
+/* плеер для песни */
+.item audio { width: 100%; margin-top: .9rem; height: 34px; }
+.item audio::-webkit-media-controls-panel { background: rgba(255,255,255,.06); }
+
+.media-empty {
+  color: var(--ink-dim); font-family: var(--sans); font-size: .95rem;
+  padding: 2.4rem 0; text-align: center; border: 1px dashed rgba(212,175,90,.22);
+  border-radius: 12px;
+}
+html[data-theme="light"] .item { background: rgba(0,0,0,.03); }
+
 </style>
 </head>
 <body>
+
 <div class="scrim" id="scrim"></div>
 <nav class="drawer" id="drawer">
-  <div class="title">Sections</div>
-  <a class="mrow" href="essay.html">Essay</a>
-  <a class="mrow" href="architecture.html">Architecture</a>
-  <a class="mrow" href="labs.html">Laboratory</a>
-  <a class="mrow" href="music.html">Music</a>
-  <a class="mrow" href="video.html">Video</a>
-  <a class="mrow" href="https://quantareon-engine.onrender.com" target="_blank" rel="noopener">Astro-Fractal<span class="ext">↗</span></a>
-  <a class="mrow" href="https://dreams.quantareon.com" target="_blank" rel="noopener">Oracle<span class="ext">↗</span></a>
-  <a class="mrow" href="https://quantarion-platform-vladm.amvera.io" target="_blank" rel="noopener">Platform<span class="ext">↗</span></a>
+  <div class="title">Разделы</div>
+  <a class="mrow" href="essay-ru.html">Эссе</a>
+  <a class="mrow" href="architecture-ru.html">Архитектура</a>
+  <a class="mrow" href="labs-ru.html">Лаборатория</a>
+  <a class="mrow" href="music-ru.html">Музыка</a>
+  <a class="mrow active" href="video-ru.html">Видео</a>
+  <a class="mrow" href="https://quantareon-engine.onrender.com" target="_blank" rel="noopener">Астро-Фрактал<span class="ext">↗</span></a>
+  <a class="mrow" href="https://dreams.quantareon.com" target="_blank" rel="noopener">Оракул<span class="ext">↗</span></a>
+  <a class="mrow" href="https://quantarion-platform-vladm.amvera.io" target="_blank" rel="noopener">Платформа<span class="ext">↗</span></a>
 </nav>
 
 <header class="topbar">
   <div class="book-wrap" id="bookBtn">
-    <span class="menu-hint">Menu</span>
+    <span class="menu-hint">Меню</span>
     <span class="book"><svg width="42" height="42" viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="bkgold" x1="0" y1="0" x2="1" y2="1">
@@ -758,258 +796,54 @@ html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a
 </svg></span>
   </div>
   <div class="qname-wrap">
-    <div class="talk-hint">
-      <span class="txt">Want to talk?</span>
-      <span class="arr"><svg width="15" height="17" viewBox="0 0 22 24" xmlns="http://www.w3.org/2000/svg"><path d="M11 22 L11 2 M11 22 L4 14 M11 22 L18 14" stroke="#e8384f" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-    </div>
     <div class="qname" id="qname">QUANTAREON<span class="ring"></span><span class="ring"></span><span class="ring"></span></div>
   </div>
   <div class="topbar-right">
-    <a class="lang-link" href="ru.html">RU</a>
-    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch theme">&#9728;</button>
+    <a class="lang-link" href="video.html">EN</a>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Сменить тему">&#9728;</button>
   </div>
 </header>
-<header class="hero">
-  <h1 class="sr-only">Light and Code — A Path from the Cell to Consciousness</h1>
 
-  <video class="hero-video" id="heroVideo" src="video-hero-en.mp4" preload="auto" playsinline webkit-playsinline controls="false" disablepictureinpicture disableremoteplayback x-webkit-airplay="deny"></video>
-  <button class="hero-btn idle" id="heroBtn" type="button" aria-label="Play">&#9654;</button>
-  <button class="hero-off" id="heroOff" type="button" aria-label="Turn off">&#10005;</button>
+<main class="media-wrap">
+  <div class="media-kicker">Видео</div>
+  <h1 class="media-title">Видео Квантареон</h1>
+  <p class="media-lead">Авторское видео создателя Квантареона. Нажми на название — ролик откроется на YouTube.</p>
 
-  <aside class="vchat" id="vchat">
-    <div class="vchat-head">
-      <span>Conversation</span>
-      <button class="vchat-close" id="vchatClose" type="button" aria-label="Close conversation panel">&#10005;</button>
-    </div>
-    <div class="vchat-body" id="vchatBody">
-      <div class="vchat-empty" id="vchatEmpty">Speak — your words will appear here</div>
-    </div>
-  </aside>
-</header>
+  <!-- ═══════════════════════════════════════════════════════════
+       КАК ДОБАВИТЬ ВИДЕО: скопируй блок ниже, вставь следом
+       и поменяй три вещи — название, подпись и ссылку на YouTube.
+       ═══════════════════════════════════════════════════════════ -->
 
-<div class="astro-portal" onclick="window.open('https://quantareon-engine.onrender.com','_blank','noopener')">
-  <div class="astro-name">ASTRO-FRACTAL</div>
-  <div class="astro-sub">Time Machine · entry by code</div>
-</div>
+  <div class="media-empty" id="empty">
+    Первые ролики появятся совсем скоро.
+  </div>
+
+  <!--
+  <a class="item" href="https://youtu.be/ВАШ_КОД" target="_blank" rel="noopener">
+    <span class="item-play">▶</span>
+    <div class="item-name">Название ролика</div>
+    <div class="item-note">2026 · смотреть на YouTube</div>
+  </a>
+  -->
+</main>
 
 <footer class="footer">
   <div class="ring">◯</div>
-  <div>© 2026 Vlad M. / QUANTAREON Labs · All rights reserved</div>
+  <div>© 2026 Влад М. / QUANTAREON Labs · Все права защищены</div>
 </footer>
-
-
-<div class="stars-bg" id="starsBg" aria-hidden="true"></div>
-
-<script>
-(function(){
-  var c = document.getElementById('starsBg');
-  var n = window.matchMedia('(max-width: 680px)').matches ? 80 : 150;
-  for (var i=0;i<n;i++){
-    var s = document.createElement('div');
-    s.className = 'st';
-    var size = (Math.random()*2.6+1).toFixed(1);
-    s.style.width = size+'px'; s.style.height = size+'px';
-    s.style.left = (Math.random()*100).toFixed(2)+'%';
-    s.style.top  = (Math.random()*100).toFixed(2)+'%';
-    s.style.setProperty('--d', (Math.random()*3+2).toFixed(2)+'s');
-    s.style.setProperty('--dl', (Math.random()*4).toFixed(2)+'s');
-    c.appendChild(s);
-  }
-})();
-</script>
-
-<script>
-/* === HERO VIDEO: autostart on first interaction (mouse/wheel/touch/key) === */
-(function () {
-  var hero = document.querySelector('.hero');
-  var v = document.getElementById('heroVideo');
-  var btn = document.getElementById('heroBtn');
-  if (!hero || !v || !btn) return;
-
-  var started = false, needUnmute = false;
-
-  function tryUnmute() { if (needUnmute) { v.muted = false; needUnmute = false; } }
-
-  function updateBtn() {
-    var playing = started && !v.paused && !v.ended;
-    btn.innerHTML = playing ? '&#10074;&#10074;' : '&#9654;';
-    btn.classList.toggle('idle', !playing);
-    btn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
-  }
-
-  function start() {
-    if (started) return;
-    started = true;
-    hero.classList.add('playing');
-    var p = v.play();
-    if (p && p.catch) {
-      p.catch(function () {           /* браузер не пустил звук без клика */
-        v.muted = true; needUnmute = true;
-        v.play().catch(function(){});
-      });
-    }
-    updateBtn();
-  }
-
-  /* чуть дёрнул мышкой или колёсиком — включается */
-  ['mousemove', 'wheel', 'touchstart', 'keydown'].forEach(function (e) {
-    window.addEventListener(e, start, { once: true, passive: true });
-  });
-  /* первый явный клик/тап где угодно — снимаем mute, если браузер его навязал */
-  window.addEventListener('pointerdown', tryUnmute, { once: true });
-
-  btn.addEventListener('click', function (ev) {
-    ev.stopPropagation();
-    if (!started) { start(); tryUnmute(); return; }
-    if (v.paused || v.ended) { v.play(); } else { v.pause(); }
-    tryUnmute();
-  });
-  v.addEventListener('click', function () { btn.click(); });
-  v.addEventListener('play', function () { hero.classList.remove('paused'); updateBtn(); });
-  v.addEventListener('pause', function () { if (started && !v.ended) hero.classList.add('paused'); updateBtn(); });
-
-  /* крестик: остановить заставку, вернуть первый кадр видео */
-  var off = document.getElementById('heroOff');
-  if (off) off.addEventListener('click', function (ev) {
-    ev.stopPropagation();
-    v.pause();
-    hero.classList.remove('playing'); hero.classList.remove('paused');
-    started = false;
-    v.currentTime = 0;
-    updateBtn();
-  });
-
-  /* доиграло до конца — первый кадр видео, кнопка ждёт ручного повтора */
-  v.addEventListener('ended', function () {
-    hero.classList.remove('playing'); hero.classList.remove('paused');
-    started = false;
-    v.currentTime = 0;
-    updateBtn();
-  });
-})();
-</script>
-
-<script>
-/* === Light/dark theme toggle === */
-(function(){
-  var root = document.documentElement;
-  var btn = document.getElementById('themeToggle');
-  if (!btn) return;
-  function apply(theme){
-    if (theme === 'light') root.setAttribute('data-theme', 'light');
-    else root.removeAttribute('data-theme');
-    btn.innerHTML = theme === 'light' ? '\u263D' : '\u2600';
-  }
-  var saved = 'dark';
-  try { if (localStorage.getItem('theme') === 'light') saved = 'light'; } catch(e){}
-  apply(saved);
-  btn.addEventListener('click', function(){
-    var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
-    apply(next);
-    try { localStorage.setItem('theme', next); } catch(e){}
-  });
-})();
-</script>
 
 <script>
 (function(){
   var book = document.getElementById('bookBtn');
   var drawer = document.getElementById('drawer');
   var scrim = document.getElementById('scrim');
-  function toggle(open){
-    drawer.classList[open?'add':'remove']('open');
-    scrim.classList[open?'add':'remove']('open');
-  }
-  book.addEventListener('click', function(){ toggle(!drawer.classList.contains('open')); });
-  scrim.addEventListener('click', function(){ toggle(false); });
-  var qname = document.getElementById('qname');
-  var hint = document.querySelector('.talk-hint');
-  /* подсказка прячется, пока голос работает, и возвращается когда он выключен */
-  function syncHint(){
-    var on = qname.classList.contains('active');
-    if (hint) hint.style.display = on ? 'none' : '';
-  }
-  qname.addEventListener('click', function(){
-    if (window.QuantareonVoice) {
-      window.QuantareonVoice.toggle();
-    } else {
-      qname.classList.toggle('active');
-      showToast('Voice assistant is still loading…');
-    }
-    syncHint();
-    setTimeout(syncHint, 400);
-    var box = document.getElementById('vchat');
-    if (box && qname.classList.contains('active')) box.classList.add('open');
-    /* голос включили — глушим песню заставки */
-    if (qname.classList.contains('active')) {
-      var hv = document.getElementById('heroVideo');
-      if (hv && !hv.paused) { try { hv.pause(); } catch(e){} }
-      var hero = document.querySelector('.hero');
-      if (hero) hero.classList.remove('playing');
-      var hb = document.getElementById('heroBtn');
-      if (hb) hb.classList.add('idle');
-    }
+  if (book) book.addEventListener('click', function(){
+    drawer.classList.toggle('open'); scrim.classList.toggle('open');
   });
-  setInterval(syncHint, 1500);
-})();
-</script>
-
-<script>
-/* Регистрируем service worker — иначе Chrome на Android
-   не покажет «Установить приложение» */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').catch(function(){});
-  });
-}
-</script>
-
-<div class="qtoast" id="qtoast"></div>
-<script>
-/* ---------- окно разговора: сюда голосовой модуль шлёт реплики ---------- */
-function addMessage(role, text){
-  var box = document.getElementById('vchat');
-  var body = document.getElementById('vchatBody');
-  var empty = document.getElementById('vchatEmpty');
-  if (!box || !body || !text) return;
-  box.classList.add('open');
-  if (empty) empty.remove();
-  var clean = String(text)
-        .replace(/^\s*🎤\s*/, '')
-        .replace(/\[sticker:[^\]]*\]/gi, '')   /* служебные метки платформы не показываем */
-        .replace(/\s{2,}/g, ' ')
-        .trim();
-  if (!clean) return;
-  var d = document.createElement('div');
-  d.className = 'vmsg ' + (role === 'user' ? 'me' : 'him');
-  var w = document.createElement('span');
-  w.className = 'who';
-  w.textContent = (role === 'user' ? 'You' : 'Quantareon');
-  d.appendChild(w);
-  d.appendChild(document.createTextNode(clean));
-  body.appendChild(d);
-  body.scrollTop = body.scrollHeight;
-}
-(function(){
-  var c = document.getElementById('vchatClose');
-  if (c) c.addEventListener('click', function(){
-    document.getElementById('vchat').classList.remove('open');
+  if (scrim) scrim.addEventListener('click', function(){
+    drawer.classList.remove('open'); scrim.classList.remove('open');
   });
 })();
-
-/* ---------- всплывашка статуса (её ищет голосовой модуль) ---------- */
-var _qtoastTimer = null;
-function showToast(msg){
-  var el = document.getElementById('qtoast');
-  if (!el) return;
-  el.textContent = msg;
-  var bad = /^[❌⚠]/.test(msg);
-  el.classList.toggle('bad', bad);
-  el.classList.add('show');
-  clearTimeout(_qtoastTimer);
-  _qtoastTimer = setTimeout(function(){ el.classList.remove('show'); }, bad ? 12000 : 3200);
-}
 </script>
-<script src="quantareon-voice.js?v=11"></script>
 </body>
 </html>
