@@ -757,6 +757,15 @@ html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a
 }
 html[data-theme="light"] .item { background: rgba(0,0,0,.03); }
 
+
+.home-back {
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  margin-top: 1px; color: var(--fire); text-decoration: none;
+  font-size: 24px; font-weight: 700; line-height: 1; opacity: .8;
+  text-shadow: 0 0 1px var(--fire);
+  transition: opacity .2s, transform .2s;
+}
+.home-back:hover { opacity: 1; transform: translateX(-50%) translateX(-2px); }
 </style>
 </head>
 <body>
@@ -794,6 +803,7 @@ html[data-theme="light"] .item { background: rgba(0,0,0,.03); }
   <circle cx="33" cy="22" r="0.6" fill="#e9e2d0"/><circle cx="27" cy="26" r="0.8" fill="#e9e2d0"/>
   <path d="M21 15 l1.4 2.8 3.1 .4 -2.2 2.2 .5 3.1 -2.8 -1.5 -2.8 1.5 .5 -3.1 -2.2 -2.2 3.1 -.4 Z" fill="url(#bkgold)"/>
 </svg></span>
+    <a class="home-back" href="ru.html" title="На главную" aria-label="На главную">&#8592;</a>
   </div>
   <div class="qname-wrap">
     <div class="qname" id="qname">QUANTAREON<span class="ring"></span><span class="ring"></span><span class="ring"></span></div>
