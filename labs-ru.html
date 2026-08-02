@@ -449,21 +449,113 @@ html, body {
 }
 * { max-width: 100%; }
 img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; }
+
+/* ===== ШАПКА-КНИЖЕЧКА (как на эссе) ===== */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: flex-end; justify-content: center;
+  height: 80px; padding-bottom: 11px;
+  background: var(--nav-bg); backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--sans);
+}
+.book-wrap {
+  position: absolute; left: 18px; bottom: 9px;
+  display: flex; flex-direction: column; align-items: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.menu-hint {
+  font-size: 13px; color: #e8384f; letter-spacing: 1px;
+  margin-bottom: 2px; text-shadow: 0 0 8px rgba(232,56,79,.6);
+  opacity: 0; animation: menuflash 8s ease-in-out infinite;
+}
+.book { line-height: 0; transition: transform .5s ease; animation: bookbreathe 5s ease-in-out infinite; }
+.home-back {
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  margin-top: 1px; color: var(--fire); text-decoration: none;
+  font-size: 24px; font-weight: 700; line-height: 1; opacity: .8;
+  text-shadow: 0 0 1px var(--fire);
+  transition: opacity .2s, transform .2s;
+}
+.home-back:hover { opacity: 1; transform: translateX(-50%) translateX(-2px); }
+@keyframes bookbreathe { 0%,80%,100%{transform:scale(1)} 90%{transform:scale(1.14)} }
+.topbar-right {
+  position: absolute; right: 22px; bottom: 9px;
+  display: flex; align-items: center; gap: 14px;
+}
+.lang-link { color: var(--ink-dim); text-decoration: none; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; transition: color .25s; }
+.lang-link:hover { color: var(--fire); }
+.topbar .theme-toggle {
+  flex: 0 0 auto; width: 2rem; height: 2rem; border-radius: 50%;
+  border: 1px solid var(--line); background: transparent; color: var(--ink-dim);
+  font-size: .9rem; line-height: 1; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: color .25s, border-color .25s;
+  -webkit-tap-highlight-color: transparent;
+}
+.topbar .theme-toggle:hover { color: var(--fire); border-color: var(--fire); }
+.drawer {
+  position: fixed; top: 0; left: 0; bottom: 0; width: 260px; z-index: 60;
+  background: var(--bg-soft); border-right: 1px solid var(--line);
+  transform: translateX(-100%); transition: transform .35s ease;
+  padding: 1.6rem 0; font-family: var(--sans); overflow-y: auto;
+}
+.drawer.open { transform: translateX(0); }
+.drawer .title { padding: 0 24px 12px; color: var(--fire); font-size: 11px; letter-spacing: 2px; text-transform: uppercase; border-bottom: 1px solid var(--line); }
+.mrow { display: block; padding: 13px 24px; color: var(--ink); font-size: 14px; text-decoration: none; border-bottom: 1px solid rgba(201,153,63,.08); cursor: pointer; transition: background .2s; }
+.mrow:hover { background: rgba(201,153,63,.08); }
+.mrow .ext { color: var(--ink-faint); font-size: 11px; margin-left: 4px; }
+.scrim { position: fixed; inset: 0; background: rgba(0,0,0,.5); opacity: 0; pointer-events: none; transition: opacity .35s ease; z-index: 55; }
+.scrim.open { opacity: 1; pointer-events: auto; }
+
+.qname-link { text-decoration: none; cursor: pointer; }
+.qname-link:hover { opacity: .85; }
 </style>
 </head>
 <body>
-<nav class="nav">
-  <a class="nav-brand" href="ru.html">QUANTAREON.</a>
-  <div class="nav-right">
-    <div class="nav-links">
-      <a href="essay-ru.html">Эссе</a>
-      <a href="architecture-ru.html">Архитектура</a>
-      <a href="labs-ru.html" class="active">Лаборатория</a>
-        <a href="labs.html">EN</a>
-    </div>
+<div class="scrim" id="scrim"></div>
+<nav class="drawer" id="drawer">
+  <div class="title">Разделы</div>
+  <a class="mrow" href="essay-ru.html">Эссе</a>
+  <a class="mrow" href="architecture-ru.html">Архитектура</a>
+  <a class="mrow active" href="labs-ru.html">Лаборатория</a>
+  <a class="mrow" href="music-ru.html">Музыка</a>
+  <a class="mrow" href="video-ru.html">Видео</a>
+  <a class="mrow" href="https://quantareon-engine.onrender.com" target="_blank" rel="noopener">Астро-Фрактал<span class="ext">↗</span></a>
+  <a class="mrow" href="https://dreams.quantareon.com" target="_blank" rel="noopener">Оракул<span class="ext">↗</span></a>
+  <a class="mrow" href="https://quantarion-platform-vladm.amvera.io" target="_blank" rel="noopener">Платформа<span class="ext">↗</span></a>
+</nav>
+
+<header class="topbar">
+  <div class="book-wrap" id="bookBtn">
+    <span class="menu-hint">Меню</span>
+    <span class="book"><svg width="42" height="42" viewBox="0 0 42 42" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bkgold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e8c464"/><stop offset="0.5" stop-color="#fff6d5"/><stop offset="1" stop-color="#b8862b"/>
+    </linearGradient>
+    <radialGradient id="bksky" cx="0.5" cy="0.4" r="0.7">
+      <stop offset="0" stop-color="#2a3550"/><stop offset="1" stop-color="#0b0d16"/>
+    </radialGradient>
+  </defs>
+  <path d="M21 8 C16 5, 7 5, 4 7 L4 34 C7 32, 16 32, 21 35 Z" fill="url(#bksky)" stroke="url(#bkgold)" stroke-width="1.3"/>
+  <path d="M21 8 C26 5, 35 5, 38 7 L38 34 C35 32, 26 32, 21 35 Z" fill="url(#bksky)" stroke="url(#bkgold)" stroke-width="1.3"/>
+  <line x1="21" y1="8" x2="21" y2="35" stroke="url(#bkgold)" stroke-width="1.3"/>
+  <circle cx="11" cy="14" r="0.8" fill="#e9e2d0"/><circle cx="15" cy="20" r="0.6" fill="#e9e2d0"/>
+  <circle cx="9" cy="24" r="0.7" fill="#e9e2d0"/><circle cx="30" cy="13" r="0.7" fill="#e9e2d0"/>
+  <circle cx="33" cy="22" r="0.6" fill="#e9e2d0"/><circle cx="27" cy="26" r="0.8" fill="#e9e2d0"/>
+  <path d="M21 15 l1.4 2.8 3.1 .4 -2.2 2.2 .5 3.1 -2.8 -1.5 -2.8 1.5 .5 -3.1 -2.2 -2.2 3.1 -.4 Z" fill="url(#bkgold)"/>
+</svg></span>
+    <a class="home-back" href="ru.html" title="На главную" aria-label="На главную">&#8592;</a>
+  </div>
+  <div class="qname-wrap">
+    <a class="qname qname-link" href="ru.html">QUANTAREON</a>
+  </div>
+  <div class="topbar-right">
+    <a class="lang-link" href="labs.html">EN</a>
     <button class="theme-toggle" id="themeToggle" type="button" aria-label="Сменить тему">&#9728;</button>
   </div>
-</nav>
+</header>
 
 <main class="page">
   <div class="page-kicker">QUANTAREON Labs</div>
@@ -575,6 +667,27 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(function(){});
   });
 }
+</script>
+
+<script>
+/* Меню-книжечка: открытие и закрытие */
+(function () {
+  var book   = document.getElementById('bookBtn');
+  var drawer = document.getElementById('drawer');
+  var scrim  = document.getElementById('scrim');
+  if (!book || !drawer || !scrim) return;
+  function toggle(open) {
+    drawer.classList[open ? 'add' : 'remove']('open');
+    scrim.classList[open ? 'add' : 'remove']('open');
+  }
+  book.addEventListener('click', function () {
+    toggle(!drawer.classList.contains('open'));
+  });
+  scrim.addEventListener('click', function () { toggle(false); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') toggle(false);
+  });
+})();
 </script>
 </body>
 </html>
