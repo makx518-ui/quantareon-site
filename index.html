@@ -819,7 +819,7 @@ html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a
 </script>
 
 <script>
-/* === HERO VIDEO: autostart on first interaction (mouse/wheel/touch/key) === */
+/* === ЗАСТАВКА: запускается ТОЛЬКО кнопкой воспроизведения === */
 (function () {
   var hero = document.querySelector('.hero');
   var v = document.getElementById('heroVideo');
@@ -851,11 +851,9 @@ html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a
     updateBtn();
   }
 
-  /* чуть дёрнул мышкой или колёсиком — включается */
-  ['mousemove', 'wheel', 'touchstart', 'keydown'].forEach(function (e) {
-    window.addEventListener(e, start, { once: true, passive: true });
-  });
-  /* первый явный клик/тап где угодно — снимаем mute, если браузер его навязал */
+  /* 🎵 ТОЛЬКО ПО КНОПКЕ. Раньше песня включалась от любого движения мышкой,
+     колёсика или касания — человек заходил и она начинала играть сама.
+     Теперь запуск исключительно с кнопки (или клика по самой заставке). */
   window.addEventListener('pointerdown', tryUnmute, { once: true });
 
   btn.addEventListener('click', function (ev) {
