@@ -720,6 +720,21 @@ html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a
 .astro-sub { margin-top: .6rem; font-family: var(--sans); font-size: .72rem; letter-spacing: .18em; text-transform: uppercase; color: var(--ink-faint); }
 @media (max-width: 680px) { .astro-name { font-size: 18px; letter-spacing: 3px; } }
 
+
+/* ═══ ПЕРЕКЛЮЧАТЕЛЬ МОДЕЛИ (виден только хозяину) ═══ */
+.mswitch { display: none; align-items: center; gap: 6px; margin-left: auto; margin-right: 10px; }
+.mswitch.on { display: flex; }
+.mswitch button {
+  font-family: var(--sans); font-size: 10px; letter-spacing: .04em;
+  padding: 3px 8px; border-radius: 999px; cursor: pointer;
+  background: transparent; color: var(--ink-dim);
+  border: 1px solid rgba(201,153,63,.28);
+  transition: color .2s, border-color .2s, background .2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.mswitch button:hover { color: var(--fire); border-color: rgba(201,153,63,.6); }
+.mswitch button.active { color: var(--fire); border-color: var(--fire); background: rgba(201,153,63,.12); }
+.mswitch button[disabled] { opacity: .5; cursor: default; }
 </style>
 </head>
 <body>
@@ -779,6 +794,10 @@ html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a
   <aside class="vchat" id="vchat">
     <div class="vchat-head">
       <span>Разговор</span>
+      <span class="mswitch" id="mswitch" title="Модель ответов — видно только вам">
+        <button type="button" data-model="small">быстрая</button>
+        <button type="button" data-model="big">умная</button>
+      </span>
       <button class="vchat-close" id="vchatClose" type="button" aria-label="Закрыть окно разговора">&#10005;</button>
     </div>
     <div class="vchat-body" id="vchatBody">
@@ -1012,6 +1031,6 @@ function showToast(msg){
   _qtoastTimer = setTimeout(function(){ el.classList.remove('show'); }, bad ? 12000 : 3200);
 }
 </script>
-<script src="quantareon-voice.js?v=14"></script>
+<script src="quantareon-voice.js?v=15"></script>
 </body>
 </html>

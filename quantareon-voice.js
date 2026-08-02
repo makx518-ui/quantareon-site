@@ -68,6 +68,60 @@
         if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; }
     }
 
+
+    // ═══ 🔀 ПЕРЕКЛЮЧАТЕЛЬ МОДЕЛИ — виден только хозяину ═══
+    // Кнопки в шапке окна разговора: «быстрая» и «умная». Показываются,
+    // только если в браузере лежит ключ хозяина; гости их не видят.
+    (function initModelSwitch() {
+        var box = document.getElementById('mswitch');
+        if (!box || !OWNER_KEY) return;          // нет ключа — нет кнопок
+
+        var btns = box.querySelectorAll('button[data-model]');
+
+        function mark(currentId) {
+            btns.forEach(function (b) {
+                var isBig = b.getAttribute('data-model') === 'big';
+                var active = isBig ? /120b/.test(currentId) : /20b/.test(currentId);
+                b.classList.toggle('active', active);
+            });
+        }
+
+        function load() {
+            fetch(CONFIG.SERVER + '/api/voice-model?key=' + encodeURIComponent(OWNER_KEY))
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (!d.owner) return;        // сервер не признал ключ
+                    box.classList.add('on');
+                    mark(d.current || '');
+                })
+                .catch(function () {});
+        }
+
+        btns.forEach(function (b) {
+            b.addEventListener('click', function () {
+                var want = b.getAttribute('data-model');
+                btns.forEach(function (x) { x.disabled = true; });
+                fetch(CONFIG.SERVER + '/api/voice-model', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: OWNER_KEY, model: want })
+                })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (d && d.current) {
+                        mark(d.current);
+                        if (typeof showToast === 'function')
+                            showToast(want === 'big' ? '🧠 Умная модель' : '⚡ Быстрая модель');
+                    }
+                })
+                .catch(function () {})
+                .then(function () { btns.forEach(function (x) { x.disabled = false; }); });
+            });
+        });
+
+        load();
+    })();
+
     // ☕ Render на бесплатном тарифе засыпает после простоя и просыпается
     // до минуты. Будим его заранее, как только страница открылась, —
     // чтобы к моменту клика по имени он уже был на ногах.
