@@ -794,10 +794,6 @@ html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a
   <aside class="vchat" id="vchat">
     <div class="vchat-head">
       <span>Conversation</span>
-      <span class="mswitch" id="mswitch" title="Answer model — visible to you only">
-        <button type="button" data-model="small">fast</button>
-        <button type="button" data-model="big">smart</button>
-      </span>
       <button class="vchat-close" id="vchatClose" type="button" aria-label="Close conversation">&#10005;</button>
     </div>
     <div class="vchat-body" id="vchatBody">
@@ -1027,6 +1023,6 @@ function showToast(msg){
   _qtoastTimer = setTimeout(function(){ el.classList.remove('show'); }, bad ? 12000 : 3200);
 }
 </script>
-<script src="quantareon-voice.js?v=16"></script>
+<script src="quantareon-voice.js?v=17"></script>
 </body>
 </html>

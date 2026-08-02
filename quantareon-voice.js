@@ -69,60 +69,79 @@
     }
 
 
-    // ═══ 🔀 ПЕРЕКЛЮЧАТЕЛЬ МОДЕЛИ — виден только хозяину ═══
-    // Кнопки в шапке окна разговора: «быстрая» и «умная». Показываются,
-    // только если в браузере лежит ключ хозяина; гости их не видят.
+    // ═══ 🔀 ПЕРЕКЛЮЧАТЕЛЬ МОДЕЛИ — только для хозяина ═══
+    // Кнопки «быстрая»/«умная» СОЗДАЮТСЯ КОДОМ и только тогда, когда сервер
+    // признал ключ хозяина. В разметке страницы их нет вовсе — гость не найдёт
+    // их даже в исходнике. Выбор общий: переключил — стало у всех, потому что
+    // модель хранится на сервере, а не в браузере.
     (function initModelSwitch() {
-        var box = document.getElementById('mswitch');
-        if (!box || !OWNER_KEY) return;          // нет ключа — нет кнопок
+        if (!OWNER_KEY) return;                   // нет ключа — ничего не строим
 
-        var btns = box.querySelectorAll('button[data-model]');
-
-        // Сверяем ПОЛНОЕ имя модели, а не кусочек: в «gpt-oss-120b» сидит
-        // «20b», и по кусочку обе кнопки считали себя включёнными.
         var MODEL_ID = { small: 'openai/gpt-oss-20b', big: 'openai/gpt-oss-120b' };
+        var LABEL = (LANG === 'en') ? { small: 'fast', big: 'smart' }
+                                    : { small: 'быстрая', big: 'умная' };
+        var box = null, btns = [];
+
+        function build() {
+            var head = document.querySelector('.vchat-head');
+            var close = document.querySelector('.vchat-close');
+            if (!head || document.getElementById('mswitch')) return false;
+
+            box = document.createElement('span');
+            box.className = 'mswitch on';
+            box.id = 'mswitch';
+            box.title = (LANG === 'en') ? 'Answer model — visible to you only'
+                                        : 'Модель ответов — видно только вам';
+
+            ['small', 'big'].forEach(function (k) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.setAttribute('data-model', k);
+                b.textContent = LABEL[k];
+                b.addEventListener('click', function () { switchTo(k); });
+                box.appendChild(b);
+                btns.push(b);
+            });
+
+            head.insertBefore(box, close);
+            return true;
+        }
 
         function mark(currentId) {
             btns.forEach(function (b) {
-                var mine = MODEL_ID[b.getAttribute('data-model')];
-                b.classList.toggle('active', currentId === mine);
+                b.classList.toggle('active', currentId === MODEL_ID[b.getAttribute('data-model')]);
             });
         }
 
-        function load() {
-            fetch(CONFIG.SERVER + '/api/voice-model?key=' + encodeURIComponent(OWNER_KEY))
-                .then(function (r) { return r.json(); })
-                .then(function (d) {
-                    if (!d.owner) return;        // сервер не признал ключ
-                    box.classList.add('on');
-                    mark(d.current || '');
-                })
-                .catch(function () {});
+        function switchTo(want) {
+            btns.forEach(function (x) { x.disabled = true; });
+            fetch(CONFIG.SERVER + '/api/voice-model', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: OWNER_KEY, model: want })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (d && d.current) {
+                    mark(d.current);
+                    if (typeof showToast === 'function')
+                        showToast(want === 'big'
+                            ? (LANG === 'en' ? '🧠 Smart model' : '🧠 Умная модель')
+                            : (LANG === 'en' ? '⚡ Fast model'  : '⚡ Быстрая модель'));
+                }
+            })
+            .catch(function () {})
+            .then(function () { btns.forEach(function (x) { x.disabled = false; }); });
         }
 
-        btns.forEach(function (b) {
-            b.addEventListener('click', function () {
-                var want = b.getAttribute('data-model');
-                btns.forEach(function (x) { x.disabled = true; });
-                fetch(CONFIG.SERVER + '/api/voice-model', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ key: OWNER_KEY, model: want })
-                })
-                .then(function (r) { return r.json(); })
-                .then(function (d) {
-                    if (d && d.current) {
-                        mark(d.current);
-                        if (typeof showToast === 'function')
-                            showToast(want === 'big' ? '🧠 Умная модель' : '⚡ Быстрая модель');
-                    }
-                })
-                .catch(function () {})
-                .then(function () { btns.forEach(function (x) { x.disabled = false; }); });
-            });
-        });
-
-        load();
+        // спрашиваем сервер: признаёт ли он ключ. Признал — строим кнопки.
+        fetch(CONFIG.SERVER + '/api/voice-model?key=' + encodeURIComponent(OWNER_KEY))
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                if (!d || !d.owner) return;       // не хозяин — кнопок не будет
+                if (build()) mark(d.current || '');
+            })
+            .catch(function () {});
     })();
 
     // ☕ Render на бесплатном тарифе засыпает после простоя и просыпается
