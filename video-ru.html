@@ -766,6 +766,30 @@ html[data-theme="light"] .item { background: rgba(0,0,0,.03); }
   transition: opacity .2s, transform .2s;
 }
 .home-back:hover { opacity: 1; transform: translateX(-50%) translateX(-2px); }
+
+/* ═══ КАРТОЧКА ВИДЕО С ОБЛОЖКОЙ ═══ */
+.vcard {
+  display: block; text-decoration: none; color: inherit; margin-bottom: 1.4rem;
+  border: 1px solid rgba(212,175,90,.18); border-radius: 14px; overflow: hidden;
+  background: rgba(255,255,255,.035);
+  transition: border-color .25s, transform .25s, background .25s;
+}
+.vcard:hover { border-color: rgba(212,175,90,.5); background: rgba(212,175,90,.06); transform: translateY(-2px); }
+.vcard-thumb { position: relative; display: block; line-height: 0; background: #000; }
+.vcard-thumb img { width: 100%; height: auto; display: block; opacity: .92; transition: opacity .25s; }
+.vcard:hover .vcard-thumb img { opacity: 1; }
+.vcard-play {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(10,10,12,.62); border: 1px solid rgba(212,175,90,.6);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--fire); font-size: 22px; padding-left: 4px;
+  backdrop-filter: blur(3px); transition: background .25s, transform .25s;
+}
+.vcard:hover .vcard-play { background: rgba(10,10,12,.78); transform: translate(-50%,-50%) scale(1.06); }
+.vcard-body { padding: 1rem 1.2rem 1.15rem; }
+.vcard-name { font-size: 1.08rem; letter-spacing: .02em; margin-bottom: .25rem; }
+.vcard-note { font-family: var(--sans); font-size: .82rem; color: var(--ink-dim); }
 </style>
 </head>
 <body>
@@ -818,21 +842,25 @@ html[data-theme="light"] .item { background: rgba(0,0,0,.03); }
   <div class="media-kicker">Видео</div>
   <h1 class="media-title">Видео Квантареон</h1>
   <!-- ═══════════════════════════════════════════════════════════
-       КАК ДОБАВИТЬ ВИДЕО: скопируй блок ниже, вставь следом
-       и поменяй три вещи — название, подпись и ссылку на YouTube.
+       КАК ДОБАВИТЬ ВИДЕО: скопируй карточку целиком, вставь следом
+       и поменяй три вещи —
+         1) КОД РОЛИКА в двух местах (в обложке и в ссылке),
+            он берётся из адреса youtu.be/КОД
+         2) название
+         3) подпись
        ═══════════════════════════════════════════════════════════ -->
 
-  <div class="media-empty" id="empty">
-    Первые ролики появятся совсем скоро.
-  </div>
-
-  <!--
-  <a class="item" href="https://youtu.be/ВАШ_КОД" target="_blank" rel="noopener">
-    <span class="item-play">▶</span>
-    <div class="item-name">Название ролика</div>
-    <div class="item-note">2026 · смотреть на YouTube</div>
+  <a class="vcard" href="https://youtu.be/d-7KdcAIOzo" target="_blank" rel="noopener">
+    <span class="vcard-thumb">
+      <img src="https://img.youtube.com/vi/d-7KdcAIOzo/maxresdefault.jpg"
+           alt="" loading="lazy">
+      <span class="vcard-play">&#9654;</span>
+    </span>
+    <span class="vcard-body">
+      <span class="vcard-name">Тайна бытия</span>
+      <span class="vcard-note">2026 · смотреть на YouTube</span>
+    </span>
   </a>
-  -->
 </main>
 
 <footer class="footer">
