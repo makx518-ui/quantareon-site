@@ -29,7 +29,10 @@
         // VAD настройки
         VAD_POSITIVE_THRESHOLD: 0.57,
         VAD_NEGATIVE_THRESHOLD: 0.25,
-        VAD_REDEMPTION_FRAMES: 15,
+        // 26 вместо 15: сколько кадров тишины держим, прежде чем считать
+        // фразу законченной. Кадр ~32 мс, значит ждём ~0.83 сек вместо 0.48.
+        // Раньше короткая пауза внутри мысли обрывала фразу пополам.
+        VAD_REDEMPTION_FRAMES: 26,
         VAD_MIN_SPEECH_FRAMES: 8,
         VAD_DEBOUNCE_MS: 350,
         VAD_DEBOUNCE_MS_SPEAKING_MOBILE: 1300,   // на телефоне, пока помощник говорит
