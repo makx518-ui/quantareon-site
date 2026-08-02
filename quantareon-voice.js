@@ -36,7 +36,7 @@
         VAD_MIN_SPEECH_FRAMES: 8,
         VAD_DEBOUNCE_MS: 350,
         VAD_DEBOUNCE_MS_SPEAKING_MOBILE: 1300,   // на телефоне, пока помощник говорит
-        VAD_DEBOUNCE_MS_SPEAKING_DESKTOP: 900,   // на компьютере — колонки тоже слышны микрофону
+        VAD_DEBOUNCE_MS_SPEAKING_DESKTOP: 750,   // на компьютере — колонки тоже слышны микрофону
         VAD_MIN_DURATION_MS: 350,   // короче — реже теряем быстрые реплики
         
         // Watchdog & reconnect
