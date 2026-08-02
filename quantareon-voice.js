@@ -69,6 +69,24 @@
     }
 
 
+    // ☕ Render на бесплатном тарифе засыпает после простоя и просыпается
+    // до минуты. Будим его заранее, как только страница открылась, —
+    // чтобы к моменту клика по имени он уже был на ногах.
+    (function wakeServer() {
+        try {
+            fetch('https://quantareon-engine.onrender.com/health',
+                  { mode: 'no-cors', cache: 'no-store' }).catch(function(){});
+        } catch (e) {}
+    })();
+
+    // 🕐 Часовой пояс берём У БРАУЗЕРА: он знает настоящий, а определение
+    // по адресу в сети врёт при VPN и у провайдеров с чужими адресами.
+    let USER_TZ = '';
+    try { USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+
+    // Язык берём у самой страницы (<html lang="ru"> / "en")
+    const LANG = String(document.documentElement.lang || 'ru').toLowerCase().indexOf('en') === 0 ? 'en' : 'ru';
+
     // ═══ 🔀 ПЕРЕКЛЮЧАТЕЛЬ МОДЕЛИ — только для хозяина ═══
     // Кнопки «быстрая»/«умная» СОЗДАЮТСЯ КОДОМ и только тогда, когда сервер
     // признал ключ хозяина. В разметке страницы их нет вовсе — гость не найдёт
@@ -144,23 +162,6 @@
             .catch(function () {});
     })();
 
-    // ☕ Render на бесплатном тарифе засыпает после простоя и просыпается
-    // до минуты. Будим его заранее, как только страница открылась, —
-    // чтобы к моменту клика по имени он уже был на ногах.
-    (function wakeServer() {
-        try {
-            fetch('https://quantareon-engine.onrender.com/health',
-                  { mode: 'no-cors', cache: 'no-store' }).catch(function(){});
-        } catch (e) {}
-    })();
-
-    // 🕐 Часовой пояс берём У БРАУЗЕРА: он знает настоящий, а определение
-    // по адресу в сети врёт при VPN и у провайдеров с чужими адресами.
-    let USER_TZ = '';
-    try { USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
-
-    // Язык берём у самой страницы (<html lang="ru"> / "en")
-    const LANG = String(document.documentElement.lang || 'ru').toLowerCase().indexOf('en') === 0 ? 'en' : 'ru';
     const TXT = {
         ru: {
             connecting: '🤖 Подключение к серверу…',
