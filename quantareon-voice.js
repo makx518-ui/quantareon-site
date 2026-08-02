@@ -78,11 +78,14 @@
 
         var btns = box.querySelectorAll('button[data-model]');
 
+        // Сверяем ПОЛНОЕ имя модели, а не кусочек: в «gpt-oss-120b» сидит
+        // «20b», и по кусочку обе кнопки считали себя включёнными.
+        var MODEL_ID = { small: 'openai/gpt-oss-20b', big: 'openai/gpt-oss-120b' };
+
         function mark(currentId) {
             btns.forEach(function (b) {
-                var isBig = b.getAttribute('data-model') === 'big';
-                var active = isBig ? /120b/.test(currentId) : /20b/.test(currentId);
-                b.classList.toggle('active', active);
+                var mine = MODEL_ID[b.getAttribute('data-model')];
+                b.classList.toggle('active', currentId === mine);
             });
         }
 
