@@ -730,7 +730,7 @@ html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a
 }
 .media-title {
   font-size: clamp(2.4rem, 5.5vw, 3.6rem); font-weight: 500;
-  letter-spacing: .05em; line-height: 1.15; margin: 0 0 1.2rem;
+  letter-spacing: .05em; line-height: 1.15; margin: 0 0 2.6rem;
 }
 .media-lead { color: var(--ink-dim); font-size: 1.02rem; line-height: 1.7; margin: 0 0 3rem; max-width: 60ch; }
 
@@ -817,22 +817,24 @@ html[data-theme="light"] .item { background: rgba(0,0,0,.03); }
 <main class="media-wrap">
   <div class="media-kicker">Music</div>
   <h1 class="media-title">Quantareon Music</h1>
-  <p class="media-lead">Vlad's own music — the creator of Quantareon. The same hands that wrote the essay and built the platform.</p>
-
   <!-- ═══════════════════════════════════════════════════════════
        HOW TO ADD A SONG: copy the block below, paste it after
        and change three things — title, caption and file address.
        The address comes from the Cloudflare R2 storage.
        ═══════════════════════════════════════════════════════════ -->
 
-  <div class="media-empty" id="empty">
-    The first songs are coming very soon.
+  <!-- ═══ SONG ═══ -->
+  <div class="item">
+    <div class="item-name">The Code of the Soul</div>
+    <div class="item-note">2026</div>
+    <audio controls preload="none"
+           src="https://media.quantareon.com/The%20Code%20of%20the%20Soul.mp3"></audio>
   </div>
 
   <!--
   <div class="item">
     <div class="item-name">Song title</div>
-    <div class="item-note">2026 · music and lyrics — Vlad M.</div>
+    <div class="item-note">2026</div>
     <audio controls preload="none" src="https://media.quantareon.com/song-1.mp3"></audio>
   </div>
   -->
