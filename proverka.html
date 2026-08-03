@@ -71,7 +71,7 @@ function step(name){
   };
 }
 
-var HOST = 'quantarion-platform-vladm.amvera.io';
+var HOST = 'voice.quantareon.com';
 
 document.getElementById('go').onclick = async function(){
   out.innerHTML = ''; lines = [];
@@ -184,7 +184,7 @@ document.getElementById('go').onclick = async function(){
   /* 9 — воспроизведение голоса с сервера */
   var s9 = step('9. Проигрывание голоса');
   try {
-    var resp = await fetch('https://'+HOST+'/api/greeting');
+    var resp = await fetch('https://'+HOST+'/api/greeting?lang=ru');
     if (!resp.ok) throw new Error('сервер ответил '+resp.status);
     var ab = await resp.arrayBuffer();
     var pctx = new ACtx();
