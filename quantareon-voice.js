@@ -23,8 +23,8 @@
         // WebSocket URL — тот же сервер (unified)
         // 🎙 Голосовой Квантареон живёт на Render рядом с движком Астро-Фрактала.
         // Перенесён с Амверы 01.08.2026 — у неё развалилась сеть.
-        SERVER: 'https://quantareon-engine.onrender.com',
-        WS_URL: 'wss://quantareon-engine.onrender.com/ws/voice',
+        SERVER: 'https://voice.quantareon.com',
+        WS_URL: 'wss://voice.quantareon.com/ws/voice',
         
         // VAD настройки
         VAD_POSITIVE_THRESHOLD: 0.57,
@@ -77,7 +77,7 @@
     // чтобы к моменту клика по имени он уже был на ногах.
     (function wakeServer() {
         try {
-            fetch('https://quantareon-engine.onrender.com/health',
+            fetch('https://voice.quantareon.com/health',
                   { mode: 'no-cors', cache: 'no-store' }).catch(function(){});
         } catch (e) {}
     })();
