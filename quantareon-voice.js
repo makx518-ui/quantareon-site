@@ -437,11 +437,7 @@
         return new Promise((resolve, reject) => {
             if (window.vad) { resolve(); return; }
             const s = document.createElement('script');
-            // 🇷🇺 БЕРЁМ СО СВОЕГО ХРАНИЛИЩА, а не с чужого сайта.
-        // Раньше распознаватель речи качался с cdn.jsdelivr.net — 21 мегабайт
-        // из-за границы. Без VPN на мобильной сети он не докачивался, микрофон
-        // не запускался, и помощник молчал. Теперь всё с media.quantareon.com.
-        s.src = ASSETS + 'bundle.min.js';
+            s.src = ASSETS + 'bundle.min.js';
             s.onload = resolve;
             s.onerror = () => reject(new Error('VAD load failed'));
             document.head.appendChild(s);
@@ -830,6 +826,18 @@
             if (typeof showToast === 'function') showToast(reason);
             // Очищаем всё что успели создать
             cleanupResources();
+
+            // 🔴 ГАСИМ ВОЛНЫ. Раньше при сорвавшемся запуске признак «включено»
+            // сбрасывался внутри, а волны у имени оставались гореть. Человек
+            // жал ещё раз — модуль считал, что выключено, и запускал заново.
+            // Кнопка становилась «невыключаемой».
+            isActive = false;
+            try {
+                var имя = document.getElementById('qname');
+                if (имя) имя.classList.remove('active');
+                var обёртка = document.querySelector('.qname-wrap');
+                if (обёртка) обёртка.classList.remove('active');
+            } catch (e) {}
         } finally {
             isStarting = false;
         }
