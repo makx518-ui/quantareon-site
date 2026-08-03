@@ -19,6 +19,10 @@
     // ============================================================
     // CONFIG
     // ============================================================
+    // 📦 Хранилище с файлами голоса (Cloudflare R2, свой домен).
+    // Всё, что раньше тянулось с зарубежных сайтов, лежит здесь.
+    const ASSETS = 'https://media.quantareon.com/';
+
     const CONFIG = {
         // WebSocket URL — тот же сервер (unified)
         // 🎙 Голосовой Квантареон живёт на Render рядом с движком Астро-Фрактала.
@@ -208,6 +212,8 @@
     // Без этого iOS/Android держат звук выключенным: касание — единственный
     // момент, когда браузер разрешает включить аудио.
     let unlockCtx = null;
+    let разрешённыйЭлемент = null;   // 🔓 аудио-элемент, разбуженный касанием
+
     function unlockAudio() {
         try {
             if (!unlockCtx) unlockCtx = new ACtx();
@@ -216,6 +222,21 @@
             const s = unlockCtx.createBufferSource();
             s.buffer = b; s.connect(unlockCtx.destination); s.start(0);
         } catch (e) { console.warn('🎙 unlock failed', e); }
+
+        // 🔓 ГЛАВНОЕ ДЛЯ ТЕЛЕФОНА: браузер разрешает играть звук ТОЛЬКО в тот
+        // миг, когда человек коснулся экрана. Если мы сначала пойдём качать
+        // приветствие, разрешение «протухнет», и звук уже не запустится —
+        // отсюда была тишина при идущих волнах.
+        // Поэтому прямо сейчас, внутри касания, заводим аудио-элемент и
+        // проигрываем в нём тишину. Элемент становится «разрешённым»,
+        // и позже мы просто подменим ему источник на приветствие.
+        try {
+            if (!разрешённыйЭлемент) {
+                разрешённыйЭлемент = new Audio(
+                    'data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMD/////////////////////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQEAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//sQxAADwAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV');
+                разрешённыйЭлемент.play().catch(function () {});
+            }
+        } catch (e) {}
     }
 
     // ============================================================
@@ -252,6 +273,16 @@
     let currentResponse = '';
     let микМакс = 0, микКогда = 0, микТихо = 0;   // 🎤 самопроверка микрофона
 
+    // 📨 Короткая весточка серверу — попадает в дневник событий.
+    // Нужна, чтобы видеть со стороны, докуда дошёл запуск на телефоне.
+    function сообщить(текст) {
+        try {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'mic', note: String(текст) }));
+            }
+        } catch (e) {}
+    }
+
     // 🔒 Филлеры — отслеживаем чтобы не повторялись
     let cachedGreeting = null;
     let clientFillerDone = false;   // Клиентский greeting отыграл
@@ -274,8 +305,12 @@
         попыток = попыток || 3;
         for (let i = 1; i <= попыток; i++) {
             try {
-                const resp = await fetch(CONFIG.SERVER + '/api/greeting?lang=' + LANG,
-                                         { cache: 'no-store' });
+                // Сначала из своего хранилища (быстро и без VPN),
+                // не вышло — с сервера, как раньше.
+                const адрес = (i === 1)
+                    ? ASSETS + 'greeting-' + LANG + '.mp3'
+                    : CONFIG.SERVER + '/api/greeting?lang=' + LANG;
+                const resp = await fetch(адрес);
                 if (resp.ok) {
                     cachedGreeting = await resp.arrayBuffer();
                     console.log('🤖 RT: Greeting preloaded', cachedGreeting.byteLength, 'bytes');
@@ -320,7 +355,11 @@
             try {
                 isBotSpeaking = true;
                 const url = URL.createObjectURL(new Blob([cachedGreeting.slice(0)], { type: 'audio/mpeg' }));
-                const el = new Audio(url);
+                // Берём элемент, разбуженный касанием: новый браузер играть
+                // не даст, а этому уже разрешено.
+                const el = разрешённыйЭлемент || new Audio();
+                разрешённыйЭлемент = null;
+                el.src = url;
                 el.preload = 'auto';
                 greetingEl = el;
                 el.onended = el.onerror = () => {
@@ -398,7 +437,11 @@
         return new Promise((resolve, reject) => {
             if (window.vad) { resolve(); return; }
             const s = document.createElement('script');
-            s.src = 'https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.29/dist/bundle.min.js';
+            // 🇷🇺 БЕРЁМ СО СВОЕГО ХРАНИЛИЩА, а не с чужого сайта.
+        // Раньше распознаватель речи качался с cdn.jsdelivr.net — 21 мегабайт
+        // из-за границы. Без VPN на мобильной сети он не докачивался, микрофон
+        // не запускался, и помощник молчал. Теперь всё с media.quantareon.com.
+        s.src = ASSETS + 'bundle.min.js';
             s.onload = resolve;
             s.onerror = () => reject(new Error('VAD load failed'));
             document.head.appendChild(s);
@@ -606,10 +649,16 @@
                 if (typeof showToast === 'function') showToast(T.greetWait);
                 await Promise.race([
                     greetingDone,
-                    new Promise(r => setTimeout(r, 15000))   // страховка, чтобы не зависнуть
+                    // 6 сек вместо 15: если приветствие почему-то не зазвучало,
+                    // раньше микрофон ждал впустую целых 15 секунд, а человек
+                    // за это время жал ещё раз — и микрофон не открывался НИКОГДА.
+                    new Promise(r => setTimeout(r, 6000))
                 ]);
                 if (!isActive) { isStarting = false; return; }   // успели выключить
             }
+
+            // 🎤 Докладываем серверу о попытке открыть микрофон — видно в дневнике
+            сообщить('микрофон: открываю');
 
             // Запрашиваем микрофон
             micStream = await navigator.mediaDevices.getUserMedia({
@@ -622,6 +671,8 @@
                 }
             });
 
+            сообщить('микрофон: ОТКРЫТ');
+
             // Клонируем трек для VAD
             const track = micStream.getAudioTracks()[0].clone();
             vadStream = new MediaStream([track]);
@@ -629,8 +680,8 @@
             // Инициализация Silero VAD
             sileroVAD = await vad.MicVAD.new({
                 stream: vadStream,
-                onnxWASMBasePath: "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/",
-                baseAssetPath: "https://cdn.jsdelivr.net/npm/@ricky0123/vad-web@0.0.29/dist/",
+                onnxWASMBasePath: ASSETS,
+                baseAssetPath: ASSETS,
                 positiveSpeechThreshold: CONFIG.VAD_POSITIVE_THRESHOLD,
                 negativeSpeechThreshold: CONFIG.VAD_NEGATIVE_THRESHOLD,
                 redemptionFrames: CONFIG.VAD_REDEMPTION_FRAMES,
@@ -768,6 +819,7 @@
         } catch (err) {
             isActive = false;
             console.error('🤖 RT: Start error', err);
+            сообщить('микрофон: ОШИБКА ' + (err && (err.name || err.message) || '?'));
             var reason = '❌ ' + (err && err.message || T.unknown);
             if (err) {
                 if (err.name === 'NotAllowedError')      reason = T.micDenied;
