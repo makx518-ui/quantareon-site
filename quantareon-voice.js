@@ -250,6 +250,7 @@
 
     // Текущий ответ ассистента (собираем по чанкам)
     let currentResponse = '';
+    let микМакс = 0, микКогда = 0, микТихо = 0;   // 🎤 самопроверка микрофона
 
     // 🔒 Филлеры — отслеживаем чтобы не повторялись
     let cachedGreeting = null;
@@ -265,21 +266,46 @@
     // ============================================================
     // Предзагрузка приветствия
     // ============================================================
-    async function preloadGreeting() {
-        try {
-            const resp = await fetch(CONFIG.SERVER + '/api/greeting?lang=' + LANG);
-            if (resp.ok) {
-                cachedGreeting = await resp.arrayBuffer();
-                console.log('🤖 RT: Greeting preloaded', cachedGreeting.byteLength, 'bytes');
+    async function preloadGreeting(попыток) {
+        // На мобильной сети первая закачка часто срывается. Раньше в этом
+        // случае приветствие просто НЕ ЗВУЧАЛО: волны идут, а голоса нет.
+        // Теперь пробуем несколько раз, а если всё равно пусто — докачаем
+        // в момент нажатия (см. playGreeting).
+        попыток = попыток || 3;
+        for (let i = 1; i <= попыток; i++) {
+            try {
+                const resp = await fetch(CONFIG.SERVER + '/api/greeting?lang=' + LANG,
+                                         { cache: 'no-store' });
+                if (resp.ok) {
+                    cachedGreeting = await resp.arrayBuffer();
+                    console.log('🤖 RT: Greeting preloaded', cachedGreeting.byteLength, 'bytes');
+                    return true;
+                }
+            } catch (e) {
+                console.warn('🤖 RT: Greeting preload failed (попытка ' + i + ')', e);
             }
-        } catch (e) {
-            console.warn('🤖 RT: Greeting preload failed', e);
+            if (i < попыток) await new Promise(r => setTimeout(r, 1200));
         }
+        return false;
     }
 
     // Воспроизведение приветствия (только один раз, с возможностью принудительной остановки)
     async function playGreeting() {
-        if (!cachedGreeting || clientFillerDone || greetingPlaying) return;
+        if (clientFillerDone || greetingPlaying) return;
+
+        // 🔊 Приветствия нет в памяти — значит закачка при открытии страницы
+        // не удалась. Раньше здесь молча выходили, и человек слышал тишину.
+        // Качаем прямо сейчас.
+        if (!cachedGreeting) {
+            console.log('🤖 RT: приветствия нет — качаю сейчас');
+            if (typeof showToast === 'function') showToast('🤖 Загружаю голос…');
+            await preloadGreeting(2);
+            if (!cachedGreeting) {
+                console.warn('🤖 RT: приветствие так и не скачалось');
+                if (typeof showToast === 'function') showToast('🤖 Голос не загрузился, попробуй ещё раз');
+                return;
+            }
+        }
         
         // 🛡️ Ставим замок ДО async операций — предотвращаем повторный вызов
         clientFillerDone = true;
@@ -679,11 +705,38 @@
                 
                 // Конвертация в Int16 PCM
                 const buf = new Int16Array(pcm.length);
+                let сумма = 0;
                 for (let i = 0; i < pcm.length; i++) {
                     const s = Math.max(-1, Math.min(1, pcm[i]));
                     buf[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    сумма += s * s;
                 }
                 ws.send(buf.buffer);
+
+                // 🎤 САМОПРОВЕРКА МИКРОФОНА. Считаем громкость и раз в
+                // несколько секунд сообщаем серверу — он пишет в дневник.
+                // Так видно, слышит ли микрофон вообще: если всё время ноль,
+                // значит звук не идёт, и молчание помощника не его вина.
+                const громкость = Math.sqrt(сумма / pcm.length);
+                if (громкость > микМакс) микМакс = громкость;
+                const сейчас = Date.now();
+                if (сейчас - микКогда > 4000) {
+                    микКогда = сейчас;
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        try {
+                            ws.send(JSON.stringify({ type: 'mic', level: +микМакс.toFixed(4) }));
+                        } catch (e) {}
+                    }
+                    if (микМакс < 0.001) {
+                        микТихо++;
+                        if (микТихо === 3 && typeof showToast === 'function') {
+                            showToast('🎤 Микрофон не слышит звука');
+                        }
+                    } else {
+                        микТихо = 0;
+                    }
+                    микМакс = 0;
+                }
             };
 
             src.connect(scriptProc);
