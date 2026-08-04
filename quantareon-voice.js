@@ -293,6 +293,8 @@
     let greetingEl = null;          // 🔊 аудио-элемент приветствия (телефон)
     let greetingDone = null;        // ⏳ обещание: приветствие договорило
     let greetingDoneResolve = null;
+    let greetingMs = 0;             // ⏱ длина записи приветствия, мс (узнаём у самой записи)
+    let greetingStartedAt = 0;      // ⏱ когда приветствие пошло
 
     // ============================================================
     // Предзагрузка приветствия
@@ -325,6 +327,29 @@
     }
 
     // Воспроизведение приветствия (только один раз, с возможностью принудительной остановки)
+    // ⏱ Страховка на случай, если приветствие застряло.
+    // РАНЬШЕ здесь стояло глухое «жди 6 секунд и открывай микрофон». Приветствие
+    // выросло до 7.1 сек (когда мы сбавили темп голоса) — и страховка стала
+    // срабатывать КАЖДЫЙ раз: микрофон открывался на шестой секунде, Android
+    // переключал звуковой тракт, и последнее слово проваливалось.
+    // Теперь ждём столько, сколько длится сама запись, а выходим досрочно
+    // только если приветствие вообще не зазвучало.
+    function страховкаПриветствия() {
+        return new Promise(resolve => {
+            const начало = Date.now();
+            (function проверить() {
+                // приветствие так и не заиграло за 3 секунды — идти дальше
+                if (!greetingPlaying && Date.now() - начало > 3000) return resolve();
+                // длина записи известна — ждём её целиком плюс секунда запаса
+                if (greetingMs && greetingStartedAt &&
+                    Date.now() - greetingStartedAt > greetingMs + 1000) return resolve();
+                // длину узнать не удалось — крайний срок, чтобы не висеть вечно
+                if (Date.now() - начало > 20000) return resolve();
+                setTimeout(проверить, 150);
+            })();
+        });
+    }
+
     async function playGreeting() {
         if (clientFillerDone || greetingPlaying) return;
 
@@ -362,6 +387,11 @@
                 el.src = url;
                 el.preload = 'auto';
                 greetingEl = el;
+                // ⏱ Длину приветствия спрашиваем у самой записи, а не держим
+                // в уме числом: поменяем текст или темп голоса — она подстроится.
+                el.onloadedmetadata = () => {
+                    if (isFinite(el.duration) && el.duration > 0) greetingMs = el.duration * 1000;
+                };
                 el.onended = el.onerror = () => {
                     isBotSpeaking = false;
                     greetingPlaying = false;
@@ -369,7 +399,9 @@
                     try { URL.revokeObjectURL(url); } catch(e) {}
                     if (greetingDoneResolve) { greetingDoneResolve(); greetingDoneResolve = null; }
                 };
+                greetingStartedAt = Date.now();
                 await el.play();
+                if (isFinite(el.duration) && el.duration > 0) greetingMs = el.duration * 1000;
                 addToChat('assistant', T.greetText);
                 return;
             } catch (e) {
@@ -418,6 +450,8 @@
                 try { ctx.close(); } catch(e) {}
                 if (greetingDoneResolve) { greetingDoneResolve(); greetingDoneResolve = null; }
             };
+            greetingMs = buf.duration * 1000;
+            greetingStartedAt = Date.now();
             src.start(0);
             addToChat('assistant', T.greetText);
         } catch (e) {
@@ -643,13 +677,7 @@
             // Загрузка распознавателя выше шла параллельно — она звука не трогает.
             if (IS_MOBILE && greetingDone) {
                 if (typeof showToast === 'function') showToast(T.greetWait);
-                await Promise.race([
-                    greetingDone,
-                    // 6 сек вместо 15: если приветствие почему-то не зазвучало,
-                    // раньше микрофон ждал впустую целых 15 секунд, а человек
-                    // за это время жал ещё раз — и микрофон не открывался НИКОГДА.
-                    new Promise(r => setTimeout(r, 6000))
-                ]);
+                await Promise.race([ greetingDone, страховкаПриветствия() ]);
                 if (!isActive) { isStarting = false; return; }   // успели выключить
             }
 
