@@ -395,6 +395,12 @@
                 el.onended = el.onerror = () => {
                     isBotSpeaking = false;
                     greetingPlaying = false;
+                    // 📱 ВАЖНО ДЛЯ ANDROID: аудио-элемент надо не просто забыть,
+                    // а явно освободить. Пока он держит звуковой выход, система
+                    // не отдаёт звуковой тракт микрофону — тот открывается, но
+                    // отдаёт РОВНЫЕ НУЛИ, и первые слова уходят в пустоту.
+                    try { el.pause(); } catch(e) {}
+                    try { el.removeAttribute('src'); el.load(); } catch(e) {}
                     greetingEl = null;
                     try { URL.revokeObjectURL(url); } catch(e) {}
                     if (greetingDoneResolve) { greetingDoneResolve(); greetingDoneResolve = null; }
@@ -679,6 +685,25 @@
                 if (typeof showToast === 'function') showToast(T.greetWait);
                 await Promise.race([ greetingDone, страховкаПриветствия() ]);
                 if (!isActive) { isStarting = false; return; }   // успели выключить
+            }
+
+            // 📱 Перед микрофоном звук должен быть отпущен ПОЛНОСТЬЮ.
+            // Если приветствие оборвалось не через onended (ошибка, выключение),
+            // элемент мог остаться живым — добиваем его здесь, и только потом
+            // даём системе короткую передышку на переключение тракта.
+            if (IS_MOBILE) {
+                if (greetingEl) {
+                    try { greetingEl.pause(); } catch(e) {}
+                    try { greetingEl.removeAttribute('src'); greetingEl.load(); } catch(e) {}
+                    greetingEl = null;
+                }
+                if (currentEl) {
+                    try { currentEl.pause(); } catch(e) {}
+                    try { currentEl.removeAttribute('src'); currentEl.load(); } catch(e) {}
+                    currentEl = null;
+                }
+                await new Promise(r => setTimeout(r, 400));
+                if (!isActive) { isStarting = false; return; }
             }
 
             // 🎤 Докладываем серверу о попытке открыть микрофон — видно в дневнике
