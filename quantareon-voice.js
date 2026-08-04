@@ -276,6 +276,7 @@
     // 📨 Короткая весточка серверу — попадает в дневник событий.
     // Нужна, чтобы видеть со стороны, докуда дошёл запуск на телефоне.
     function сообщить(текст) {
+        дневник('· ' + текст);
         try {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(JSON.stringify({ type: 'mic', note: String(текст) }));
@@ -293,8 +294,6 @@
     let greetingEl = null;          // 🔊 аудио-элемент приветствия (телефон)
     let greetingDone = null;        // ⏳ обещание: приветствие договорило
     let greetingDoneResolve = null;
-    let greetingMs = 0;             // ⏱ длина записи приветствия, мс (узнаём у самой записи)
-    let greetingStartedAt = 0;      // ⏱ когда приветствие пошло
 
     // ============================================================
     // Предзагрузка приветствия
@@ -327,29 +326,6 @@
     }
 
     // Воспроизведение приветствия (только один раз, с возможностью принудительной остановки)
-    // ⏱ Страховка на случай, если приветствие застряло.
-    // РАНЬШЕ здесь стояло глухое «жди 6 секунд и открывай микрофон». Приветствие
-    // выросло до 7.1 сек (когда мы сбавили темп голоса) — и страховка стала
-    // срабатывать КАЖДЫЙ раз: микрофон открывался на шестой секунде, Android
-    // переключал звуковой тракт, и последнее слово проваливалось.
-    // Теперь ждём столько, сколько длится сама запись, а выходим досрочно
-    // только если приветствие вообще не зазвучало.
-    function страховкаПриветствия() {
-        return new Promise(resolve => {
-            const начало = Date.now();
-            (function проверить() {
-                // приветствие так и не заиграло за 3 секунды — идти дальше
-                if (!greetingPlaying && Date.now() - начало > 3000) return resolve();
-                // длина записи известна — ждём её целиком плюс секунда запаса
-                if (greetingMs && greetingStartedAt &&
-                    Date.now() - greetingStartedAt > greetingMs + 1000) return resolve();
-                // длину узнать не удалось — крайний срок, чтобы не висеть вечно
-                if (Date.now() - начало > 20000) return resolve();
-                setTimeout(проверить, 150);
-            })();
-        });
-    }
-
     async function playGreeting() {
         if (clientFillerDone || greetingPlaying) return;
 
@@ -387,27 +363,14 @@
                 el.src = url;
                 el.preload = 'auto';
                 greetingEl = el;
-                // ⏱ Длину приветствия спрашиваем у самой записи, а не держим
-                // в уме числом: поменяем текст или темп голоса — она подстроится.
-                el.onloadedmetadata = () => {
-                    if (isFinite(el.duration) && el.duration > 0) greetingMs = el.duration * 1000;
-                };
                 el.onended = el.onerror = () => {
                     isBotSpeaking = false;
                     greetingPlaying = false;
-                    // 📱 ВАЖНО ДЛЯ ANDROID: аудио-элемент надо не просто забыть,
-                    // а явно освободить. Пока он держит звуковой выход, система
-                    // не отдаёт звуковой тракт микрофону — тот открывается, но
-                    // отдаёт РОВНЫЕ НУЛИ, и первые слова уходят в пустоту.
-                    try { el.pause(); } catch(e) {}
-                    try { el.removeAttribute('src'); el.load(); } catch(e) {}
                     greetingEl = null;
                     try { URL.revokeObjectURL(url); } catch(e) {}
                     if (greetingDoneResolve) { greetingDoneResolve(); greetingDoneResolve = null; }
                 };
-                greetingStartedAt = Date.now();
                 await el.play();
-                if (isFinite(el.duration) && el.duration > 0) greetingMs = el.duration * 1000;
                 addToChat('assistant', T.greetText);
                 return;
             } catch (e) {
@@ -456,8 +419,6 @@
                 try { ctx.close(); } catch(e) {}
                 if (greetingDoneResolve) { greetingDoneResolve(); greetingDoneResolve = null; }
             };
-            greetingMs = buf.duration * 1000;
-            greetingStartedAt = Date.now();
             src.start(0);
             addToChat('assistant', T.greetText);
         } catch (e) {
@@ -487,6 +448,38 @@
     // ============================================================
     // WebSocket — подключение к voice-master протоколу
     // ============================================================
+
+    // ============================================================
+    // 👁 ЭКРАН НАБЛЮДЕНИЯ (временный, только для поиска причины)
+    // Пишет прямо на страницу всё, что происходит со связью и
+    // ответами. Логику голоса не трогает — только показывает.
+    // Убрать: удалить этот блок и вызовы дневник(...) ниже.
+    // ============================================================
+    var _окно = null;
+    function дневник(текст) {
+        try {
+            if (!_окно) {
+                _окно = document.createElement('div');
+                _окно.style.cssText = 'position:fixed;left:4px;right:4px;bottom:4px;max-height:42vh;' +
+                    'overflow:auto;background:rgba(0,0,0,.86);color:#8f8;font:11px/1.35 monospace;' +
+                    'padding:6px 8px;z-index:99999;border:1px solid #4a4;border-radius:6px;white-space:pre-wrap';
+                var шапка = document.createElement('div');
+                шапка.textContent = '👁 наблюдение — нажми, чтобы скрыть';
+                шапка.style.cssText = 'color:#ff8;cursor:pointer;margin-bottom:4px';
+                шапка.onclick = function () { _окно.style.display = 'none'; };
+                _окно.appendChild(шапка);
+                document.body.appendChild(_окно);
+            }
+            var t = new Date();
+            var строка = document.createElement('div');
+            строка.textContent = ('0' + t.getMinutes()).slice(-2) + ':' +
+                                 ('0' + t.getSeconds()).slice(-2) + '.' +
+                                 ('00' + t.getMilliseconds()).slice(-3) + '  ' + текст;
+            _окно.appendChild(строка);
+            _окно.scrollTop = _окно.scrollHeight;
+        } catch (e) {}
+    }
+
     function connectWS() {
         if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
         
@@ -503,6 +496,7 @@
         ws.binaryType = 'blob';  // 🔑 Voice-master шлёт бинарные аудио-фреймы
 
         ws.onopen = () => {
+            дневник('✅ СВЯЗЬ ОТКРЫТА');
             console.log('🤖 RT: Connected');
             lastActivity = Date.now();
             
@@ -544,6 +538,7 @@
         };
 
         ws.onclose = (e) => {
+            дневник('❌ СВЯЗЬ ЗАКРЫТА, код ' + (e && e.code) + (e && e.wasClean ? ' (чисто)' : ' (обрыв)'));
             console.log('🤖 RT: Disconnected', e.code, e.reason);
             if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
             
@@ -558,7 +553,7 @@
             }
         };
 
-        ws.onerror = (e) => console.error('🤖 RT: WS error', e);
+        ws.onerror = (e) => { дневник('⚠️ ОШИБКА СВЯЗИ'); console.error('🤖 RT: WS error', e); };
         ws.onmessage = onMessage;
     }
 
@@ -593,10 +588,12 @@
                     break;
                     
                 case 'response_text':
+                    дневник('📝 пришёл текст: ' + String(msg.text || '').slice(0, 40));
                     currentResponse += (currentResponse ? ' ' : '') + d.content;
                     break;
                     
                 case 'audio_start':
+                    дневник('🔊 пошёл звук ответа');
                     stopWaitNotice();        // ⏳ ответ пошёл — ожидание снято
                     isBotSpeaking = true;
                     serverFillerDone = true;  // 🔒 Замок: любой звук = филлер больше не нужен
@@ -605,6 +602,7 @@
                     break;
                     
                 case 'audio_end':
+                    дневник('🔇 звук ответа кончился');
                     isBotSpeaking = false;
                     serverFillerDone = true;  // 🔒 Серверный филлер отыграл
                     if (currentResponse) {
@@ -666,38 +664,9 @@
         
         try {
             isActive = true;
-
-            // 📱 ТЕЛЕФОН: микрофон открываем ПЕРВЫМ, до приветствия.
-            // Открытие микрофона заставляет Android переключить звуковой тракт
-            // с музыкального на разговорный, и на это уходит несколько секунд —
-            // всё это время поток пустой (в дневнике «громкость 0 — ТИШИНА»).
-            // Раньше переключение приходилось на начало разговора, и первые
-            // слова человека уходили в мёртвый микрофон. Теперь оно проходит
-            // в тишине, пока никто не говорит, а за семь секунд приветствия
-            // микрофон успевает полностью проснуться.
-            // Эхо не мешает: пока помощник говорит, звук на сервер не идёт
-            // (см. isBotSpeaking в scriptProc), и приветствие не перебивается.
-            if (IS_MOBILE) {
-                сообщить('микрофон: открываю ДО приветствия');
-                try {
-                    micStream = await navigator.mediaDevices.getUserMedia({
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true,
-                            sampleRate: 16000,
-                            channelCount: 1
-                        }
-                    });
-                    сообщить('микрофон: ОТКРЫТ до приветствия');
-                } catch (e) {
-                    // Не вышло — не беда, ниже попробуем обычным порядком
-                    micStream = null;
-                    сообщить('микрофон: не открылся заранее — ' + (e && e.name || '?'));
-                }
-                if (!isActive) { isStarting = false; return; }
-            }
-
+            window._первыйЗвук = 0;
+            дневник('▶️ ЗАПУСК');
+            
             // Мгновенно играем приветствие (кешированное)
             playGreeting();
             
@@ -714,107 +683,31 @@
             // Загрузка распознавателя выше шла параллельно — она звука не трогает.
             if (IS_MOBILE && greetingDone) {
                 if (typeof showToast === 'function') showToast(T.greetWait);
-                await Promise.race([ greetingDone, страховкаПриветствия() ]);
+                await Promise.race([
+                    greetingDone,
+                    // 6 сек вместо 15: если приветствие почему-то не зазвучало,
+                    // раньше микрофон ждал впустую целых 15 секунд, а человек
+                    // за это время жал ещё раз — и микрофон не открывался НИКОГДА.
+                    new Promise(r => setTimeout(r, 6000))
+                ]);
                 if (!isActive) { isStarting = false; return; }   // успели выключить
             }
 
-            // 📱 Перед микрофоном звук должен быть отпущен ПОЛНОСТЬЮ.
-            // Если приветствие оборвалось не через onended (ошибка, выключение),
-            // элемент мог остаться живым — добиваем его здесь, и только потом
-            // даём системе короткую передышку на переключение тракта.
-            if (IS_MOBILE && !micStream) {
-                if (greetingEl) {
-                    try { greetingEl.pause(); } catch(e) {}
-                    try { greetingEl.removeAttribute('src'); greetingEl.load(); } catch(e) {}
-                    greetingEl = null;
+            // 🎤 Докладываем серверу о попытке открыть микрофон — видно в дневнике
+            сообщить('микрофон: открываю');
+
+            // Запрашиваем микрофон
+            micStream = await navigator.mediaDevices.getUserMedia({
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true,
+                    sampleRate: 16000,
+                    channelCount: 1
                 }
-                if (currentEl) {
-                    try { currentEl.pause(); } catch(e) {}
-                    try { currentEl.removeAttribute('src'); currentEl.load(); } catch(e) {}
-                    currentEl = null;
-                }
-                await new Promise(r => setTimeout(r, 400));
-                if (!isActive) { isStarting = false; return; }
-            }
+            });
 
-            // 🎤 Микрофон мог быть открыт заранее (телефон) — тогда не трогаем
-            if (!micStream) {
-                сообщить('микрофон: открываю');
-                micStream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true,
-                        sampleRate: 16000,
-                        channelCount: 1
-                    }
-                });
-                сообщить('микрофон: ОТКРЫТ');
-            }
-
-            // 📡 СНАЧАЛА ОТПРАВКА ЗВУКА, ПОТОМ распознаватель.
-            // Silero тяжёлый: тянет из хранилища модель и движок на десятки
-            // мегабайт и компилирует их — на телефоне это секунды, а через VPN
-            // и того больше. Раньше он поднимался ПЕРВЫМ, и всё это время звук
-            // на сервер не уходил вовсе: человек говорил в пустоту, первое
-            // слово терялось. Теперь поток идёт к серверу сразу, Flux слышит
-            // с первой секунды, а Silero подтягивается следом — он нужен
-            // только для перебивания.
-            // PCM streaming — отправляем аудио на сервер
-            // iOS не даёт задать частоту принудительно — берём как выйдет,
-            // ниже по коду есть пересчёт частоты, он всё выровняет
-            try { audioCtx = new ACtx({ sampleRate: 16000 }); }
-            catch (e) { audioCtx = new ACtx(); }
-            if (audioCtx.state === 'suspended') { try { await audioCtx.resume(); } catch (e) {} }
-            const src = audioCtx.createMediaStreamSource(micStream);
-            scriptProc = audioCtx.createScriptProcessor(4096, 1, 1);
-
-            scriptProc.onaudioprocess = (e) => {
-                if (!isActive || !ws || ws.readyState !== WebSocket.OPEN || isBotSpeaking) return;
-                const inp = e.inputBuffer.getChannelData(0);
-                if (!inp || !inp.length) return;
-                
-                // Ресемплинг если нужно
-                const pcm = audioCtx.sampleRate !== 16000 ? resample(inp, audioCtx.sampleRate) : inp;
-                
-                // Конвертация в Int16 PCM
-                const buf = new Int16Array(pcm.length);
-                let сумма = 0;
-                for (let i = 0; i < pcm.length; i++) {
-                    const s = Math.max(-1, Math.min(1, pcm[i]));
-                    buf[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                    сумма += s * s;
-                }
-                ws.send(buf.buffer);
-
-                // 🎤 САМОПРОВЕРКА МИКРОФОНА. Считаем громкость и раз в
-                // несколько секунд сообщаем серверу — он пишет в дневник.
-                // Так видно, слышит ли микрофон вообще: если всё время ноль,
-                // значит звук не идёт, и молчание помощника не его вина.
-                const громкость = Math.sqrt(сумма / pcm.length);
-                if (громкость > микМакс) микМакс = громкость;
-                const сейчас = Date.now();
-                if (сейчас - микКогда > 4000) {
-                    микКогда = сейчас;
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        try {
-                            ws.send(JSON.stringify({ type: 'mic', level: +микМакс.toFixed(4) }));
-                        } catch (e) {}
-                    }
-                    if (микМакс < 0.001) {
-                        микТихо++;
-                        if (микТихо === 3 && typeof showToast === 'function') {
-                            showToast('🎤 Микрофон не слышит звука');
-                        }
-                    } else {
-                        микТихо = 0;
-                    }
-                    микМакс = 0;
-                }
-            };
-
-            src.connect(scriptProc);
-            scriptProc.connect(audioCtx.destination);
+            сообщить('микрофон: ОТКРЫТ');
 
             // Клонируем трек для VAD
             const track = micStream.getAudioTracks()[0].clone();
@@ -879,7 +772,65 @@
 
                 onVADMisfire: () => {}
             });
+
+            // PCM streaming — отправляем аудио на сервер
+            // iOS не даёт задать частоту принудительно — берём как выйдет,
+            // ниже по коду есть пересчёт частоты, он всё выровняет
+            try { audioCtx = new ACtx({ sampleRate: 16000 }); }
+            catch (e) { audioCtx = new ACtx(); }
+            if (audioCtx.state === 'suspended') { try { await audioCtx.resume(); } catch (e) {} }
+            const src = audioCtx.createMediaStreamSource(micStream);
+            scriptProc = audioCtx.createScriptProcessor(4096, 1, 1);
+
+            scriptProc.onaudioprocess = (e) => {
+                if (!isActive || !ws || ws.readyState !== WebSocket.OPEN || isBotSpeaking) return;
+                const inp = e.inputBuffer.getChannelData(0);
+                if (!inp || !inp.length) return;
+                
+                // Ресемплинг если нужно
+                const pcm = audioCtx.sampleRate !== 16000 ? resample(inp, audioCtx.sampleRate) : inp;
+                
+                // Конвертация в Int16 PCM
+                const buf = new Int16Array(pcm.length);
+                let сумма = 0;
+                for (let i = 0; i < pcm.length; i++) {
+                    const s = Math.max(-1, Math.min(1, pcm[i]));
+                    buf[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    сумма += s * s;
+                }
+                if (!window._первыйЗвук) { window._первыйЗвук = 1; дневник('🎙 ЗВУК ПОШЁЛ НА СЕРВЕР'); }
+                ws.send(buf.buffer);
+
+                // 🎤 САМОПРОВЕРКА МИКРОФОНА. Считаем громкость и раз в
+                // несколько секунд сообщаем серверу — он пишет в дневник.
+                // Так видно, слышит ли микрофон вообще: если всё время ноль,
+                // значит звук не идёт, и молчание помощника не его вина.
+                const громкость = Math.sqrt(сумма / pcm.length);
+                if (громкость > микМакс) микМакс = громкость;
+                const сейчас = Date.now();
+                if (сейчас - микКогда > 4000) {
+                    микКогда = сейчас;
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        try {
+                            ws.send(JSON.stringify({ type: 'mic', level: +микМакс.toFixed(4) }));
+                        } catch (e) {}
+                    }
+                    if (микМакс < 0.001) {
+                        микТихо++;
+                        if (микТихо === 3 && typeof showToast === 'function') {
+                            showToast('🎤 Микрофон не слышит звука');
+                        }
+                    } else {
+                        микТихо = 0;
+                    }
+                    микМакс = 0;
+                }
+            };
+
+            src.connect(scriptProc);
+            scriptProc.connect(audioCtx.destination);
             await sileroVAD.start();
+            дневник('🧠 распознаватель готов');
 
             // Watchdog — при зависании реконнектим WS, НЕ перезапускаем start()
             // (перезапуск start() мог вызвать повторное приветствие)
@@ -887,6 +838,7 @@
             watchdog = setInterval(() => {
                 if (!isActive) { clearInterval(watchdog); watchdog = null; return; }
                 if (Date.now() - lastActivity > CONFIG.WATCHDOG_MS) {
+                    дневник('⏰ СТОРОЖ: тишина 30 сек — переподключаюсь');
                     console.warn('🤖 RT: Watchdog timeout, reconnecting WS...');
                     lastActivity = Date.now();  // 🛡️ Сброс чтобы не зациклиться
                     // Переподключаем только WebSocket, не весь модуль
