@@ -275,6 +275,34 @@
 
     // 📨 Короткая весточка серверу — попадает в дневник событий.
     // Нужна, чтобы видеть со стороны, докуда дошёл запуск на телефоне.
+    // 📦 БУФЕР ПЕРВЫХ СЕКУНД.
+    // Связь может открыться на мгновение позже, чем человек начнёт говорить
+    // (через VPN — заметно позже). Раньше такие куски просто выбрасывались,
+    // и первое слово пропадало. Теперь копим их и выливаем, как только связь
+    // готова. Держим не больше двух секунд, чтобы не завалить распознаватель
+    // старьём: 16000 отсчётов в секунду по 2 байта.
+    var _копилка = [];
+    var _копилкаБайт = 0;
+    var КОПИЛКА_ПРЕДЕЛ = 16000 * 2 * 2;   // ~2 секунды звука
+
+    function копить(buf) {
+        _копилка.push(buf);
+        _копилкаБайт += buf.byteLength;
+        while (_копилкаБайт > КОПИЛКА_ПРЕДЕЛ && _копилка.length > 1) {
+            _копилкаБайт -= _копилка.shift().byteLength;
+        }
+    }
+
+    function вылить() {
+        if (!_копилка.length) return;
+        if (!ws || ws.readyState !== WebSocket.OPEN) return;
+        try {
+            for (var i = 0; i < _копилка.length; i++) ws.send(_копилка[i]);
+        } catch (e) {}
+        _копилка = [];
+        _копилкаБайт = 0;
+    }
+
     function сообщить(текст) {
         try {
             if (ws && ws.readyState === WebSocket.OPEN) {
@@ -497,6 +525,7 @@
         ws.binaryType = 'blob';  // 🔑 Voice-master шлёт бинарные аудио-фреймы
 
         ws.onopen = () => {
+            setTimeout(вылить, 50);   // связь открылась — отдаём накопленное
             console.log('🤖 RT: Connected');
             lastActivity = Date.now();
             
@@ -703,6 +732,78 @@
 
             сообщить('микрофон: ОТКРЫТ');
 
+            // 📡 СНАЧАЛА ОТПРАВКА ЗВУКА, ПОТОМ распознаватель.
+            // Silero тяжёлый: тянет из хранилища модель и движок на десятки
+            // мегабайт и компилирует их — на телефоне это секунды, через VPN
+            // дольше. Раньше он поднимался ПЕРВЫМ, и всё это время звук на
+            // сервер не уходил вовсе: человек говорил в пустоту, первое слово
+            // терялось. Теперь поток идёт к серверу сразу, а Silero
+            // подтягивается следом — он нужен только для перебивания,
+            // конец реплики определяет Flux на сервере.
+            // PCM streaming — отправляем аудио на сервер
+            // iOS не даёт задать частоту принудительно — берём как выйдет,
+            // ниже по коду есть пересчёт частоты, он всё выровняет
+            try { audioCtx = new ACtx({ sampleRate: 16000 }); }
+            catch (e) { audioCtx = new ACtx(); }
+            if (audioCtx.state === 'suspended') { try { await audioCtx.resume(); } catch (e) {} }
+            const src = audioCtx.createMediaStreamSource(micStream);
+            scriptProc = audioCtx.createScriptProcessor(4096, 1, 1);
+
+            scriptProc.onaudioprocess = (e) => {
+                // ⚠️ Раньше здесь выходили, когда связи ещё нет, и звук
+                // выбрасывался. Теперь выходим только если выключены или
+                // помощник сам говорит, а «связи нет» — повод копить.
+                if (!isActive || isBotSpeaking) return;
+                const inp = e.inputBuffer.getChannelData(0);
+                if (!inp || !inp.length) return;
+                
+                // Ресемплинг если нужно
+                const pcm = audioCtx.sampleRate !== 16000 ? resample(inp, audioCtx.sampleRate) : inp;
+                
+                // Конвертация в Int16 PCM
+                const buf = new Int16Array(pcm.length);
+                let сумма = 0;
+                for (let i = 0; i < pcm.length; i++) {
+                    const s = Math.max(-1, Math.min(1, pcm[i]));
+                    buf[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+                    сумма += s * s;
+                }
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    вылить();              // сначала то, что накопилось
+                    ws.send(buf.buffer);
+                } else {
+                    копить(buf.buffer);    // связи ещё нет — не теряем
+                }
+
+                // 🎤 САМОПРОВЕРКА МИКРОФОНА. Считаем громкость и раз в
+                // несколько секунд сообщаем серверу — он пишет в дневник.
+                // Так видно, слышит ли микрофон вообще: если всё время ноль,
+                // значит звук не идёт, и молчание помощника не его вина.
+                const громкость = Math.sqrt(сумма / pcm.length);
+                if (громкость > микМакс) микМакс = громкость;
+                const сейчас = Date.now();
+                if (сейчас - микКогда > 4000) {
+                    микКогда = сейчас;
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        try {
+                            ws.send(JSON.stringify({ type: 'mic', level: +микМакс.toFixed(4) }));
+                        } catch (e) {}
+                    }
+                    if (микМакс < 0.001) {
+                        микТихо++;
+                        if (микТихо === 3 && typeof showToast === 'function') {
+                            showToast('🎤 Микрофон не слышит звука');
+                        }
+                    } else {
+                        микТихо = 0;
+                    }
+                    микМакс = 0;
+                }
+            };
+
+            src.connect(scriptProc);
+            scriptProc.connect(audioCtx.destination);
+
             // Клонируем трек для VAD
             const track = micStream.getAudioTracks()[0].clone();
             vadStream = new MediaStream([track]);
@@ -766,62 +867,6 @@
 
                 onVADMisfire: () => {}
             });
-
-            // PCM streaming — отправляем аудио на сервер
-            // iOS не даёт задать частоту принудительно — берём как выйдет,
-            // ниже по коду есть пересчёт частоты, он всё выровняет
-            try { audioCtx = new ACtx({ sampleRate: 16000 }); }
-            catch (e) { audioCtx = new ACtx(); }
-            if (audioCtx.state === 'suspended') { try { await audioCtx.resume(); } catch (e) {} }
-            const src = audioCtx.createMediaStreamSource(micStream);
-            scriptProc = audioCtx.createScriptProcessor(4096, 1, 1);
-
-            scriptProc.onaudioprocess = (e) => {
-                if (!isActive || !ws || ws.readyState !== WebSocket.OPEN || isBotSpeaking) return;
-                const inp = e.inputBuffer.getChannelData(0);
-                if (!inp || !inp.length) return;
-                
-                // Ресемплинг если нужно
-                const pcm = audioCtx.sampleRate !== 16000 ? resample(inp, audioCtx.sampleRate) : inp;
-                
-                // Конвертация в Int16 PCM
-                const buf = new Int16Array(pcm.length);
-                let сумма = 0;
-                for (let i = 0; i < pcm.length; i++) {
-                    const s = Math.max(-1, Math.min(1, pcm[i]));
-                    buf[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-                    сумма += s * s;
-                }
-                ws.send(buf.buffer);
-
-                // 🎤 САМОПРОВЕРКА МИКРОФОНА. Считаем громкость и раз в
-                // несколько секунд сообщаем серверу — он пишет в дневник.
-                // Так видно, слышит ли микрофон вообще: если всё время ноль,
-                // значит звук не идёт, и молчание помощника не его вина.
-                const громкость = Math.sqrt(сумма / pcm.length);
-                if (громкость > микМакс) микМакс = громкость;
-                const сейчас = Date.now();
-                if (сейчас - микКогда > 4000) {
-                    микКогда = сейчас;
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        try {
-                            ws.send(JSON.stringify({ type: 'mic', level: +микМакс.toFixed(4) }));
-                        } catch (e) {}
-                    }
-                    if (микМакс < 0.001) {
-                        микТихо++;
-                        if (микТихо === 3 && typeof showToast === 'function') {
-                            showToast('🎤 Микрофон не слышит звука');
-                        }
-                    } else {
-                        микТихо = 0;
-                    }
-                    микМакс = 0;
-                }
-            };
-
-            src.connect(scriptProc);
-            scriptProc.connect(audioCtx.destination);
             await sileroVAD.start();
 
             // Watchdog — при зависании реконнектим WS, НЕ перезапускаем start()
