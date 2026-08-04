@@ -695,7 +695,36 @@
         
         try {
             isActive = true;
-            
+
+            // 📱 ТЕЛЕФОН: МИКРОФОН ОТКРЫВАЕМ ПЕРВЫМ, ДО ПРИВЕТСТВИЯ.
+            // Доказано замером в дневнике: человек считал «раз, два, три», и на
+            // «раз» и «два» громкость была РОВНО НОЛЬ (не шорох комнаты, а пустой
+            // поток), а на «три» сразу 0.42. Значит Android не отдаёт звуковой
+            // тракт сразу: он занят проигрыванием приветствия и переключается
+            // с задержкой в несколько секунд — первые слова падают в пустоту.
+            // Открывая микрофон ДО приветствия, мы проводим это переключение
+            // в тишине, пока никто не говорит, а за 6.8 секунды приветствия
+            // тракт успевает полностью проснуться.
+            // Эхо не мешает: пока помощник говорит, звук на сервер не уходит
+            // (см. isBotSpeaking в scriptProc), и приветствие не перебивается.
+            if (IS_MOBILE) {
+                try {
+                    micStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true,
+                            sampleRate: 16000,
+                            channelCount: 1
+                        }
+                    });
+                } catch (e) {
+                    // не вышло — не беда, ниже откроем обычным порядком
+                    micStream = null;
+                }
+                if (!isActive) { isStarting = false; return; }   // успели выключить
+            }
+
             // Мгновенно играем приветствие (кешированное)
             playGreeting();
             
@@ -716,20 +745,19 @@
                 if (!isActive) { isStarting = false; return; }   // успели выключить
             }
 
-            // 🎤 Докладываем серверу о попытке открыть микрофон — видно в дневнике
-            сообщить('микрофон: открываю');
-
-            // Запрашиваем микрофон
-            micStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                    sampleRate: 16000,
-                    channelCount: 1
-                }
-            });
-
+            // 🎤 Микрофон мог быть открыт заранее (телефон) — тогда не трогаем
+            if (!micStream) {
+                сообщить('микрофон: открываю');
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 16000,
+                        channelCount: 1
+                    }
+                });
+            }
             сообщить('микрофон: ОТКРЫТ');
 
             // 📡 СНАЧАЛА ОТПРАВКА ЗВУКА, ПОТОМ распознаватель.
