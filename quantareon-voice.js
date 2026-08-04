@@ -666,7 +666,38 @@
         
         try {
             isActive = true;
-            
+
+            // 📱 ТЕЛЕФОН: микрофон открываем ПЕРВЫМ, до приветствия.
+            // Открытие микрофона заставляет Android переключить звуковой тракт
+            // с музыкального на разговорный, и на это уходит несколько секунд —
+            // всё это время поток пустой (в дневнике «громкость 0 — ТИШИНА»).
+            // Раньше переключение приходилось на начало разговора, и первые
+            // слова человека уходили в мёртвый микрофон. Теперь оно проходит
+            // в тишине, пока никто не говорит, а за семь секунд приветствия
+            // микрофон успевает полностью проснуться.
+            // Эхо не мешает: пока помощник говорит, звук на сервер не идёт
+            // (см. isBotSpeaking в scriptProc), и приветствие не перебивается.
+            if (IS_MOBILE) {
+                сообщить('микрофон: открываю ДО приветствия');
+                try {
+                    micStream = await navigator.mediaDevices.getUserMedia({
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true,
+                            sampleRate: 16000,
+                            channelCount: 1
+                        }
+                    });
+                    сообщить('микрофон: ОТКРЫТ до приветствия');
+                } catch (e) {
+                    // Не вышло — не беда, ниже попробуем обычным порядком
+                    micStream = null;
+                    сообщить('микрофон: не открылся заранее — ' + (e && e.name || '?'));
+                }
+                if (!isActive) { isStarting = false; return; }
+            }
+
             // Мгновенно играем приветствие (кешированное)
             playGreeting();
             
@@ -691,7 +722,7 @@
             // Если приветствие оборвалось не через onended (ошибка, выключение),
             // элемент мог остаться живым — добиваем его здесь, и только потом
             // даём системе короткую передышку на переключение тракта.
-            if (IS_MOBILE) {
+            if (IS_MOBILE && !micStream) {
                 if (greetingEl) {
                     try { greetingEl.pause(); } catch(e) {}
                     try { greetingEl.removeAttribute('src'); greetingEl.load(); } catch(e) {}
@@ -706,21 +737,20 @@
                 if (!isActive) { isStarting = false; return; }
             }
 
-            // 🎤 Докладываем серверу о попытке открыть микрофон — видно в дневнике
-            сообщить('микрофон: открываю');
-
-            // Запрашиваем микрофон
-            micStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                    sampleRate: 16000,
-                    channelCount: 1
-                }
-            });
-
-            сообщить('микрофон: ОТКРЫТ');
+            // 🎤 Микрофон мог быть открыт заранее (телефон) — тогда не трогаем
+            if (!micStream) {
+                сообщить('микрофон: открываю');
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 16000,
+                        channelCount: 1
+                    }
+                });
+                сообщить('микрофон: ОТКРЫТ');
+            }
 
             // Клонируем трек для VAD
             const track = micStream.getAudioTracks()[0].clone();
