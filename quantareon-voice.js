@@ -182,7 +182,7 @@
             micBusy:    '❌ Микрофон занят другим приложением.',
             vadFail:    '❌ Не загрузился распознаватель речи — проверьте интернет.',
             unknown:    'неизвестная ошибка',
-            greetText:  'Я Квантареон, голосовой помощник этого сайта. Спрашивай, что тебя интересует.'
+            greetText:  'Привет, путник. Я Квантареон, голосовой помощник этого сайта. Спрашивай, что тебя интересует.'
         },
         en: {
             connecting: '🤖 Connecting to the server…',
@@ -196,7 +196,7 @@
             micBusy:    '❌ The microphone is busy in another app.',
             vadFail:    '❌ Speech detector failed to load — check your connection.',
             unknown:    'unknown error',
-            greetText:  'I am Quantareon, the voice assistant of this site. Ask me anything you like.'
+            greetText:  'Greetings, traveler. I am Quantareon, the voice assistant of this site. Ask me anything you like.'
         }
     };
     const T = TXT[LANG];
