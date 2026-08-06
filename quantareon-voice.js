@@ -75,6 +75,46 @@
         if (waitTimer) { clearTimeout(waitTimer); waitTimer = null; }
     }
 
+    // 🌐 ЗНАЧОК ПОИСКА: пока помощник ходит в сеть, человек видит «Ищу…»
+    // с бегущими точками — иначе пауза выглядит зависанием.
+    var поискЭл = null, поискТаймер = null;
+
+    function показатьПоиск(подпись) {
+        убратьПоиск();
+        // окно разговора на странице: сообщения кладутся в #vchatBody,
+        // а сама коробка #vchat должна быть раскрыта, иначе значка не видно
+        var коробка = document.getElementById('vchat');
+        var окно = document.getElementById('vchatBody');
+        if (!окно) return;
+        if (коробка) коробка.classList.add('open');
+        var пусто = document.getElementById('vchatEmpty');
+        if (пусто) пусто.remove();
+
+        поискЭл = document.createElement('div');
+        поискЭл.className = 'q-searching';
+        поискЭл.style.cssText =
+            'display:flex;align-items:center;gap:8px;padding:10px 14px;margin:6px 0;' +
+            'color:#c9a961;font-size:14px;opacity:.95;';
+        поискЭл.innerHTML =
+            '<span style="font-size:16px">🌐</span>' +
+            '<span>' + (подпись || 'Ищу') + '</span>' +
+            '<span class="q-dots" style="letter-spacing:2px;min-width:22px">.</span>';
+        окно.appendChild(поискЭл);
+        окно.scrollTop = окно.scrollHeight;
+
+        var точки = поискЭл.querySelector('.q-dots'), n = 1;
+        поискТаймер = setInterval(function () {
+            n = (n % 3) + 1;
+            точки.textContent = '.'.repeat(n);
+        }, 420);
+    }
+
+    function убратьПоиск() {
+        if (поискТаймер) { clearInterval(поискТаймер); поискТаймер = null; }
+        if (поискЭл && поискЭл.parentNode) поискЭл.parentNode.removeChild(поискЭл);
+        поискЭл = null;
+    }
+
 
     // ☕ Render на бесплатном тарифе засыпает после простоя и просыпается
     // до минуты. Будим его заранее, как только страница открылась, —
@@ -620,6 +660,7 @@
                     break;
                     
                 case 'audio_start':
+                    убратьПоиск();          // 🌐 ответ пошёл — значок поиска снимаем
                     stopWaitNotice();        // ⏳ ответ пошёл — ожидание снято
                     isBotSpeaking = true;
                     serverFillerDone = true;  // 🔒 Замок: любой звук = филлер больше не нужен
@@ -643,7 +684,11 @@
                     break;
                     
                 case 'status':
-                    if (d.status === 'ready') {
+                    if (d.status === 'searching') {
+                        показатьПоиск(d.message ? d.message.replace('🌐 ', '') : 'Ищу');
+                    } else if (d.status === 'search_done') {
+                        убратьПоиск();
+                    } else if (d.status === 'ready') {
                         // Сервер готов
                     } else if (d.status === 'reset') {
                         if (typeof showToast === 'function') showToast(T.reset);
