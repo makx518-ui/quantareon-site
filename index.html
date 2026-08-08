@@ -606,11 +606,14 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
 /* ================== ОКНО РАЗГОВОРА (справа от заставки) ================== */
 .vchat {
   position: absolute; top: 0; bottom: 0; right: 2.2vw;
-  width: clamp(240px, 24vw, 360px);
+  /* окно шире: длинные ответы про разделы сайта в узкое не помещались */
+  width: clamp(320px, 34vw, 520px);
   display: none; flex-direction: column;
   background: rgba(10,12,16,.72);
   border: 1px solid rgba(212,175,90,.22); border-radius: 14px;
   overflow: hidden; backdrop-filter: blur(6px); z-index: 40;
+  /* можно потянуть за левый край и сделать ещё шире */
+  resize: horizontal; min-width: 280px; max-width: 92vw;
 }
 .vchat.open { display: flex; }
 .vchat-head {
@@ -627,10 +630,21 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
 .vchat-body {
   flex: 1 1 auto; overflow-y: auto; padding: .8rem;
   display: flex; flex-direction: column; gap: .55rem;
-  scrollbar-width: thin; scrollbar-color: rgba(212,175,90,.35) transparent;
+  scrollbar-width: auto; scrollbar-color: rgba(212,175,90,.5) rgba(212,175,90,.08);
+  overscroll-behavior: contain;
 }
-.vchat-body::-webkit-scrollbar { width: 5px; }
-.vchat-body::-webkit-scrollbar-thumb { background: rgba(212,175,90,.35); border-radius: 3px; }
+/* 📜 ПОЛЗУНОК ПРОКРУТКИ — виден, когда текст не помещается.
+   Был 5 пикселей и почти прозрачный: человек не понимал, что можно
+   листать. Стал заметно шире и ярче, с дорожкой. */
+.vchat-body::-webkit-scrollbar { width: 10px; }
+.vchat-body::-webkit-scrollbar-track {
+  background: rgba(212,175,90,.07); border-radius: 5px; margin: 4px 0;
+}
+.vchat-body::-webkit-scrollbar-thumb {
+  background: rgba(212,175,90,.45); border-radius: 5px;
+  border: 2px solid transparent; background-clip: padding-box;
+}
+.vchat-body::-webkit-scrollbar-thumb:hover { background: rgba(212,175,90,.75); background-clip: padding-box; }
 .vmsg {
   font-family: var(--sans); font-size: .82rem; line-height: 1.45;
   padding: .5rem .7rem; border-radius: 11px; max-width: 92%;
@@ -678,7 +692,7 @@ html[data-theme="light"] .vmsg.him { background: rgba(0,0,0,.05); }
   .vchat {
     position: static; flex: 1 0 100%; width: auto;
     margin: .9rem 3vw 0; box-sizing: border-box; max-width: calc(100% - 6vw);
-    height: 46vh; right: auto; border-radius: 12px;
+    height: 58vh; right: auto; border-radius: 12px; resize: none;
   }
   .hero { flex-wrap: wrap; }
 }
@@ -1056,6 +1070,6 @@ function showToast(msg){
   _qtoastTimer = setTimeout(function(){ el.classList.remove('show'); }, bad ? 12000 : 3200);
 }
 </script>
-<script src="quantareon-voice.js?v=51"></script>
+<script src="quantareon-voice.js?v=52"></script>
 </body>
 </html>
