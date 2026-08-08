@@ -644,6 +644,32 @@ img, video, svg, iframe, pre, table { max-width: 100% !important; height: auto; 
 }
 .vmsg.him .who { color: var(--fire); }
 @keyframes vfade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.vchat-write {
+  display: flex; gap: 6px; align-items: center;
+  padding: 8px 10px; border-top: 1px solid rgba(212,175,90,.18);
+  background: rgba(0,0,0,.18);
+}
+.vchat-input {
+  flex: 1; min-width: 0;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(212,175,90,.22); border-radius: 9px;
+  padding: 7px 10px; color: var(--ink);
+  font-family: var(--sans); font-size: .82rem; outline: none;
+}
+.vchat-input::placeholder { color: var(--ink-dim); opacity: .7; }
+.vchat-input:focus { border-color: rgba(212,175,90,.5); }
+.vchat-send {
+  flex: 0 0 auto; cursor: pointer;
+  background: rgba(212,175,90,.16);
+  border: 1px solid rgba(212,175,90,.3); border-radius: 9px;
+  color: var(--gold); font-size: .9rem; line-height: 1;
+  padding: 7px 11px; transition: background .2s, transform .15s;
+}
+.vchat-send:hover { background: rgba(212,175,90,.3); }
+.vchat-send:active { transform: scale(.94); }
+.vchat-send[disabled] { opacity: .4; cursor: default; }
+html[data-theme="light"] .vchat-write { background: rgba(0,0,0,.05); }
+html[data-theme="light"] .vchat-input { background: rgba(255,255,255,.7); }
 .vchat-empty { color: var(--ink-dim); font-family: var(--sans); font-size: .78rem; text-align: center; margin: auto 0; opacity: .75; }
 html[data-theme="light"] .vchat { background: rgba(252,250,245,.86); }
 html[data-theme="light"] .vmsg.him { background: rgba(0,0,0,.05); }
@@ -799,6 +825,13 @@ html[data-theme="light"] .qtoast { background: rgba(252,250,245,.95); color: #2a
     <div class="vchat-body" id="vchatBody">
       <div class="vchat-empty" id="vchatEmpty">Говорите — здесь появится текст</div>
     </div>
+    <!-- ✍️ Написать вместо того чтобы говорить. Ответ всё равно голосом:
+         сервер принимает такой текст ровно как распознанную речь. -->
+    <form class="vchat-write" id="vchatWrite" onsubmit="return false;">
+      <input class="vchat-input" id="vchatInput" type="text"
+             placeholder="Написать сообщение…" autocomplete="off" />
+      <button class="vchat-send" id="vchatSend" type="button" aria-label="Отправить">&#10148;</button>
+    </form>
   </aside>
 </header>
 
@@ -1027,6 +1060,6 @@ function showToast(msg){
   _qtoastTimer = setTimeout(function(){ el.classList.remove('show'); }, bad ? 12000 : 3200);
 }
 </script>
-<script src="quantareon-voice.js?v=50"></script>
+<script src="quantareon-voice.js?v=51"></script>
 </body>
 </html>

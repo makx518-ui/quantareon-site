@@ -1255,12 +1255,59 @@
     // ============================================================
     // Глобальный API
     // ============================================================
+    // ============================================================
+    // ✍️ НАПИСАТЬ ВМЕСТО ТОГО ЧТОБЫ СКАЗАТЬ
+    // ============================================================
+    // Сервер принимает готовый текст ровно так же, как распознанную речь —
+    // и отвечает голосом. Значит для письменного вопроса не нужно ничего
+    // менять в движке: шлём то же сообщение, что шлёт распознаватель.
+    // Пригодится, когда надо продиктовать что-то длинное или точное.
+    function sendTyped(text) {
+        const t = String(text || '').trim();
+        if (!t) return false;
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            if (typeof showToast === 'function')
+                showToast(LANG === 'en' ? '🎙 Start the conversation first'
+                                        : '🎙 Сначала включите разговор');
+            return false;
+        }
+        // показываем свою реплику в окне — как будто произнесли
+        if (typeof addMessage === 'function') addMessage('user', t);
+        if (isBotSpeaking || isPlaying) bargeIn();   // говорит — уступает
+        ws.send(JSON.stringify({ type: 'transcript', text: t }));
+        return true;
+    }
+
+    // связываем поле ввода в окне разговора
+    function wireWriteBox() {
+        const поле = document.getElementById('vchatInput');
+        const кнопка = document.getElementById('vchatSend');
+        if (!поле || поле.dataset.wired) return;
+        поле.dataset.wired = '1';
+
+        const отправить = () => {
+            if (sendTyped(поле.value)) поле.value = '';
+            поле.focus();
+        };
+        if (кнопка) кнопка.addEventListener('click', отправить);
+        поле.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); отправить(); }
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', wireWriteBox);
+    } else {
+        wireWriteBox();
+    }
+
     window.QuantarionRealtime = {
         toggle,
         isActive: () => isActive,
         stop,
         resetFillers,
-        resetContext
+        resetContext,
+        sendTyped
     };
     
     // Глобальная функция для кнопки в HTML
