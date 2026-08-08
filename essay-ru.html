@@ -1269,5 +1269,55 @@ if ('serviceWorker' in navigator) {
 
 <script src="https://voice.quantareon.com/quantareon-chat.js" defer></script>
 
+
+<!-- ═══ 📊 ТИХИЙ СЧЁТЧИК ЗАХОДОВ ═══
+     Картинка размером в один пиксель, которую отдаёт наш же сервер.
+     На экране её не видно, странице она не мешает. Сообщает только:
+     какую страницу открыли, откуда пришли. Город и оператора сервер
+     берёт сам — адрес посетителя нигде не хранится.
+
+     ═══ 🔑 СКРЫТЫЙ ПУНКТ «СТАТИСТИКА» ═══
+     Виден ТОЛЬКО хозяину. Один раз открываешь сайт с ?admin=КЛЮЧ —
+     браузер запоминает, и дальше пункт всегда на месте. У посетителей
+     его нет вовсе: ни в разметке, ни в глаза. -->
+<script>
+(function () {
+  // ── считаем заход ──
+  try {
+    var т = new Image(1, 1);
+    т.src = "https://voice.quantareon.com/api/hit"
+          + "?p=" + encodeURIComponent(location.pathname)
+          + "&r=" + encodeURIComponent(document.referrer || "")
+          + "&_=" + Date.now();
+  } catch (e) {}
+
+  // ── скрытый вход для хозяина ──
+  var ПАМЯТЬ = "qn_admin";
+  try {
+    var изАдреса = new URLSearchParams(location.search).get("admin");
+    if (изАдреса) {
+      localStorage.setItem(ПАМЯТЬ, изАдреса);
+      // убираем ключ из адресной строки, чтобы не светился
+      history.replaceState(null, "", location.pathname + location.hash);
+    }
+    var ключ = localStorage.getItem(ПАМЯТЬ);
+    if (!ключ) return;
+
+    var меню = document.getElementById("drawer");
+    if (!меню || меню.querySelector(".mrow-stats")) return;
+
+    var строка = document.createElement("a");
+    строка.className = "mrow mrow-stats";
+    строка.href = "https://voice.quantareon.com/stats?key=" + encodeURIComponent(ключ);
+    строка.target = "_blank";
+    строка.rel = "noopener";
+    строка.innerHTML = 'Статистика<span class="ext">↗</span>';
+    строка.style.opacity = ".72";
+    строка.style.fontSize = ".9em";
+    меню.appendChild(строка);
+  } catch (e) {}
+})();
+</script>
+
 </body>
 </html>
