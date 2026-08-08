@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Карта сайта QUANTAREON.
+  Зачем: без неё Google знал только главную страницу — остальные разделы
+  он просто не находил, о чём и сообщала консоль 08.08.
+  Здесь перечислены все двенадцать живых страниц, парами: русская и
+  английская. Связка hreflang говорит поисковику, что это одна и та же
+  страница на двух языках, а не дубли.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <url>
+    <loc>https://quantareon.com/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/index.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/ru.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://quantareon.com/index.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/index.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/index.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/ru.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/index.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/essay.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/essay.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/essay-ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/essay-ru.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/essay.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/essay-ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/architecture.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/architecture.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/architecture-ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/architecture-ru.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/architecture.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/architecture-ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/labs.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/labs.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/labs-ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/labs-ru.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/labs.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/labs-ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/music.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/music.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/music-ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/music-ru.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/music.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/music-ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/video.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/video.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/video-ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://quantareon.com/video-ru.html</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://quantareon.com/video.html"/>
+    <xhtml:link rel="alternate" hreflang="ru" href="https://quantareon.com/video-ru.html"/>
+    <lastmod>2026-08-08</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+</urlset>
