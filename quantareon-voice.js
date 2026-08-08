@@ -1291,14 +1291,30 @@
         if (!поле || поле.dataset.wired) return;
         поле.dataset.wired = '1';
 
+        // ✍️ поле тянется вверх по мере набора, пока не упрётся в потолок
+        const ПОТОЛОК = 150;      // столько же, сколько max-height в стилях
+        const подогнать = () => {
+            поле.style.height = 'auto';
+            const нужно = поле.scrollHeight;
+            поле.style.height = Math.min(нужно, ПОТОЛОК) + 'px';
+            // упёрлись — включаем постоянно видимый ползунок
+            поле.classList.toggle('full', нужно > ПОТОЛОК);
+        };
+
         const отправить = () => {
-            if (sendTyped(поле.value)) поле.value = '';
+            if (sendTyped(поле.value)) {
+                поле.value = '';
+                подогнать();               // вернуть в одну строку
+            }
             поле.focus();
         };
         if (кнопка) кнопка.addEventListener('click', отправить);
+        поле.addEventListener('input', подогнать);
         поле.addEventListener('keydown', (e) => {
+            // Enter отправляет, Shift+Enter — новая строка
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); отправить(); }
         });
+        подогнать();
     }
 
     if (document.readyState === 'loading') {
