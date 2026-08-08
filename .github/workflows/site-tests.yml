@@ -12,7 +12,7 @@ on:
   workflow_dispatch:          # и вручную, кнопкой
 
 jobs:
-  проверка-файлов:
+  files:
     name: Файлы в репозитории
     runs-on: ubuntu-latest
     steps:
@@ -25,11 +25,11 @@ jobs:
       - name: Проверить файлы, не дожидаясь публикации
         run: python3 tests/test_site.py --local .
 
-  проверка-живого-сайта:
+  live-site:
     name: Живой сайт
     runs-on: ubuntu-latest
     # ждём, пока GitHub Pages опубликует изменения
-    needs: проверка-файлов
+    needs: files
     steps:
       - uses: actions/checkout@v4
 
@@ -37,8 +37,22 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Дать сайту опубликоваться
-        run: sleep 60
+      # ⏳ GitHub Pages публикует не мгновенно, а иногда и пару минут.
+      # Поэтому не ждём вслепую, а пробуем несколько раз: как только
+      # сайт отзовётся — идём дальше.
+      - name: Дождаться публикации
+        run: |
+          for i in 1 2 3 4 5 6; do
+            if curl -sf -o /dev/null --max-time 20 https://quantareon.com/; then
+              echo "сайт отвечает (попытка $i)"
+              sleep 20   # дать разойтись по краям сети
+              exit 0
+            fi
+            echo "жду публикации… (попытка $i)"
+            sleep 30
+          done
+          echo "сайт так и не отозвался"
+          exit 1
 
       - name: Проверить живой сайт
         run: python3 tests/test_site.py
