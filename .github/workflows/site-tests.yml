@@ -1,0 +1,44 @@
+name: Проверки сайта
+
+# Гоняем при каждой заливке в main и раз в сутки — на случай, если
+# что-то отвалилось само: истёк ключ, лёг файл, слетела разметка.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *"      # каждый день в 6 утра по Гринвичу
+  workflow_dispatch:          # и вручную, кнопкой
+
+jobs:
+  проверка-файлов:
+    name: Файлы в репозитории
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Проверить файлы, не дожидаясь публикации
+        run: python3 tests/test_site.py --local .
+
+  проверка-живого-сайта:
+    name: Живой сайт
+    runs-on: ubuntu-latest
+    # ждём, пока GitHub Pages опубликует изменения
+    needs: проверка-файлов
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Дать сайту опубликоваться
+        run: sleep 60
+
+      - name: Проверить живой сайт
+        run: python3 tests/test_site.py
